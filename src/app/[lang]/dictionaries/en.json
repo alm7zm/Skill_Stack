@@ -1,0 +1,301 @@
+{
+  "meta": {
+    "title": "SkillStack — certification planning that fits your week",
+    "description": "Pick an IT certification, get a study plan built around the hours you actually have, and put it in your calendar."
+  },
+  "a11y": {
+    "skipToContent": "Skip to content",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "toggleSidebar": "Collapse sidebar",
+    "switchLanguage": "Switch language"
+  },
+  "common": {
+    "back": "Back",
+    "next": "Next",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving",
+    "saved": "Saved",
+    "retry": "Try again",
+    "loading": "Loading",
+    "search": "Search",
+    "viewAll": "View all",
+    "free": "Free",
+    "hours": {
+      "zero": "hours",
+      "one": "hour",
+      "two": "hours",
+      "few": "hours",
+      "many": "hours",
+      "other": "hours"
+    },
+    "weeks": {
+      "zero": "weeks",
+      "one": "week",
+      "two": "weeks",
+      "few": "weeks",
+      "many": "weeks",
+      "other": "weeks"
+    },
+    "soon": "soon"
+  },
+  "nav": {
+    "home": "Home",
+    "discover": "Discover",
+    "dashboard": "Dashboard",
+    "plans": "My plans",
+    "profile": "Profile",
+    "settings": "Settings",
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "getStarted": "Get started",
+    "searchPlaceholder": "Search certifications"
+  },
+  "landing": {
+    "hero": {
+      "eyebrow": "Certification planning",
+      "title": "Pick a certification. Get a plan that fits your week.",
+      "body": "SkillStack looks at your experience and the hours you actually have, then builds a study plan you can keep — and puts it in your calendar.",
+      "cta": "Start planning",
+      "secondary": "Browse certifications",
+      "providers": "Certifications from"
+    },
+    "features": {
+      "title": "What it does",
+      "advisor": {
+        "title": "An advisor that will talk you out of it",
+        "body": "Answer a few questions about your background and goals. It tells you whether a certification is worth your time, and says so plainly when it isn't."
+      },
+      "plans": {
+        "title": "Plans built around your real week",
+        "body": "Week-by-week topics paced to the hours you have, not an idealised schedule you'll abandon by day four."
+      },
+      "resources": {
+        "title": "Resources worth your time",
+        "body": "Official docs, courses and practice exams for each certification, with the free ones marked as free."
+      },
+      "calendar": {
+        "title": "Sessions in your calendar",
+        "body": "Study sessions and your exam date go straight into Google Calendar. Re-sync updates them instead of duplicating."
+      },
+      "progress": {
+        "title": "Progress you can trust",
+        "body": "Completed topics, current streak, and an honest read on whether you're ready to sit the exam."
+      },
+      "catalog": {
+        "title": "One place to compare",
+        "body": "Certifications from AWS, Microsoft, Google, CompTIA, Cisco, PMI and others — cost, difficulty and study time side by side."
+      }
+    },
+    "how": {
+      "title": "How it works",
+      "step1": {
+        "title": "Choose a certification",
+        "body": "Filter by category, difficulty, cost and study time. Each one shows what it leads to and what it pays."
+      },
+      "step2": {
+        "title": "Talk to the advisor",
+        "body": "It asks about your experience, your budget and how much time you have, then drafts a plan and explains its reasoning."
+      },
+      "step3": {
+        "title": "Study and track",
+        "body": "Work through weekly topics, tick them off, and watch the readiness estimate move."
+      }
+    },
+    "cta": {
+      "title": "Ready to start?",
+      "body": "Pick a certification and get a plan in a few minutes.",
+      "button": "Get started"
+    }
+  },
+  "footer": {
+    "rights": "All rights reserved.",
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "tagline": "Certification planning for people with jobs."
+  },
+  "auth": {
+    "title": "Sign in to SkillStack",
+    "subtitle": "Your plans and progress stay on your account.",
+    "google": "Continue with Google",
+    "emailLabel": "Email",
+    "emailPlaceholder": "you@example.com",
+    "passwordLabel": "Password",
+    "signIn": "Sign in",
+    "signUp": "Create account",
+    "noAccount": "No account yet?",
+    "hasAccount": "Already have an account?",
+    "or": "or",
+    "checkEmail": "Check your email for a confirmation link.",
+    "errors": {
+      "generic": "We couldn't sign you in. Please try again.",
+      "invalid": "That email or password isn't right.",
+      "emailRequired": "Enter your email address.",
+      "emailInvalid": "That doesn't look like an email address.",
+      "passwordRequired": "Enter your password.",
+      "passwordShort": "Passwords need at least 8 characters."
+    }
+  },
+  "home": {
+    "greeting": "Welcome back",
+    "greetingAnon": "Welcome",
+    "subtitle": "Pick up where you left off, or find something new.",
+    "continue": "Your plans",
+    "browse": "Browse by category",
+    "popular": "Popular right now",
+    "empty": {
+      "title": "No plans yet",
+      "body": "Choose a certification and the advisor will draft you a plan.",
+      "cta": "Find a certification"
+    }
+  },
+  "search": {
+    "title": "Discover certifications",
+    "subtitle": "Compare cost, difficulty and study time across providers.",
+    "placeholder": "Search by name or provider",
+    "filters": {
+      "category": "Category",
+      "difficulty": "Difficulty",
+      "provider": "Provider",
+      "all": "All",
+      "clear": "Clear filters"
+    },
+    "results": {
+      "zero": "No certifications",
+      "one": "1 certification",
+      "two": "{count} certifications",
+      "few": "{count} certifications",
+      "many": "{count} certifications",
+      "other": "{count} certifications"
+    },
+    "empty": {
+      "title": "Nothing matched",
+      "body": "Try a broader filter or a different search term.",
+      "cta": "Clear filters"
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "streak": "Day streak",
+    "completed": "Topics done",
+    "hoursLogged": "Hours planned",
+    "readiness": "Readiness",
+    "today": "Today",
+    "upcoming": "Coming up",
+    "noTasks": "Nothing scheduled today.",
+    "empty": {
+      "title": "No plans to track yet",
+      "body": "Once you have a study plan, your progress shows up here.",
+      "cta": "Find a certification"
+    }
+  },
+  "certification": {
+    "overview": "Overview",
+    "examCost": "Exam cost",
+    "studyTime": "Study time",
+    "difficulty": "Difficulty",
+    "validity": "Valid for",
+    "provider": "Provider",
+    "topics": "What it covers",
+    "careers": "Where it leads",
+    "salary": "Typical salary",
+    "resources": "Resources",
+    "prerequisites": "Before you start",
+    "noPrerequisites": "No formal prerequisites.",
+    "startPlan": "Plan this certification",
+    "askAdvisor": "Ask the advisor",
+    "verified": "Exam details last checked {date}. Providers change prices — confirm on {provider} before you pay."
+  },
+  "advisor": {
+    "title": "Advisor",
+    "subtitle": "A few questions, then a plan.",
+    "opening": "Let's work out whether this one is worth your time. First — why are you going for it?",
+    "placeholder": "Type your answer",
+    "send": "Send",
+    "thinking": "Thinking",
+    "stages": {
+      "goals": "Goals",
+      "experience": "Experience",
+      "evaluation": "Fit",
+      "planning": "Plan"
+    },
+    "viewPlan": "View your plan",
+    "restart": "Start over",
+    "error": "The advisor stopped responding. Your answers are safe — try again."
+  },
+  "plan": {
+    "title": "Study plan",
+    "week": "Week {n}",
+    "targetDate": "Exam target",
+    "noTarget": "No date set",
+    "progress": "{done} of {total} topics done",
+    "markDone": "Mark done",
+    "markNotDone": "Mark not done",
+    "syncCalendar": "Add to Google Calendar",
+    "syncing": "Syncing",
+    "synced": "In your calendar",
+    "resync": "Update calendar",
+    "notFound": "That plan doesn't exist, or it isn't yours."
+  },
+  "profile": {
+    "title": "Profile",
+    "fullName": "Name",
+    "email": "Email",
+    "careerGoal": "Career goal",
+    "jobRole": "Current role",
+    "experienceLevel": "Experience",
+    "budget": "Budget for learning",
+    "dailyStudyTime": "Hours per day",
+    "weeklyAvailability": "Days per week",
+    "skills": "Skills",
+    "languages": "Languages",
+    "addSkill": "Add a skill",
+    "addLanguage": "Add a language",
+    "remove": "Remove",
+    "updated": "Profile updated."
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "languageBody": "Changes the interface and the advisor's replies.",
+    "calendar": "Google Calendar",
+    "calendarBody": "Let SkillStack add study sessions to your calendar.",
+    "calendarConnect": "Connect",
+    "calendarDisconnect": "Disconnect",
+    "calendarConnected": "Connected",
+    "account": "Account",
+    "signOut": "Sign out",
+    "dangerZone": "Delete account",
+    "dangerBody": "Removes your profile, plans and progress. This can't be undone.",
+    "delete": "Delete my account"
+  },
+  "categories": {
+    "cloud": "Cloud",
+    "ai": "AI and machine learning",
+    "cybersecurity": "Security",
+    "networking": "Networking",
+    "programming": "Programming",
+    "data": "Data",
+    "project-management": "Project management",
+    "devops": "DevOps"
+  },
+  "difficulty": {
+    "beginner": "Beginner",
+    "intermediate": "Intermediate",
+    "advanced": "Advanced",
+    "expert": "Expert"
+  },
+  "errors": {
+    "notFound": {
+      "title": "That page isn't here",
+      "body": "The link may be old, or the page may have moved.",
+      "cta": "Go home"
+    },
+    "generic": {
+      "title": "Something broke",
+      "body": "We couldn't load this. Trying again usually works.",
+      "cta": "Try again"
+    }
+  }
+}

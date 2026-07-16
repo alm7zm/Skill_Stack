@@ -1,26 +1,207 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ===========================================================================
+   SkillStack — warm editorial
+   ---------------------------------------------------------------------------
+   Palette is sampled from public/logo.png, not invented: the logo is an opaque
+   PNG (no alpha), so the page base MUST equal its background or the logo shows
+   a seam. paper = #FCFCDB and ink = #382612 are literal pixel reads.
+
+   One accent. No second hue, no gradients-as-decoration, no glass.
+   Fonts are wired in app/[lang]/layout.tsx via next/font (self-hosted).
+   =========================================================================== */
+
+@theme {
+  /* --- Surfaces: a single warm family, no cool grays anywhere ------------ */
+  --color-paper: #FCFCDB;        /* page base = logo background exactly */
+  --color-paper-raised: #FFFEF2; /* cards lift by getting lighter, not shadowed */
+  --color-paper-sunken: #F4F3CB; /* wells, inputs, code */
+  --color-rule: #E1DFB4;         /* borders are darkened paper, never gray */
+  --color-rule-strong: #C9C695;
+
+  /* --- Ink: text, from the logo ----------------------------------------- */
+  --color-ink: #382612;          /* 13.8:1 on paper */
+  --color-ink-muted: #6B5539;    /* 5.9:1  — body secondary */
+  --color-ink-faint: #8A7350;    /* 4.0:1  — large/decorative text only */
+
+  /* --- The one accent ---------------------------------------------------- */
+  --color-accent: #B45309;       /* 4.8:1 on paper, 5.0:1 under white text */
+  --color-accent-hover: #92400E;
+  --color-accent-wash: #F5E6C8;  /* tinted fills, not opacity hacks */
+
+  /* --- Functional only. Not decoration; error states must stay legible. --- */
+  --color-danger: #9F1239;
+  --color-danger-wash: #F7E4E4;
+  --color-success: #3F6212;
+
+  /* --- Type -------------------------------------------------------------- */
+  /* Values are set by next/font in the root layout. Arabic swaps both roles:
+     Fraunces has no Arabic coverage, so ar falls back to Plex Arabic. */
+  --font-display: var(--font-fraunces), Georgia, serif;
+  --font-body: var(--font-geist), system-ui, sans-serif;
+
+  /* --- Radius: varies by nesting depth, never uniform -------------------- */
+  --radius-xs: 0.125rem;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.875rem;
+
+  /* --- Shadows carry the paper hue, never black ------------------------- */
+  --shadow-raised: 0 1px 2px rgba(56, 38, 18, 0.06), 0 4px 12px -4px rgba(56, 38, 18, 0.08);
+  --shadow-float: 0 2px 4px rgba(56, 38, 18, 0.07), 0 12px 28px -8px rgba(56, 38, 18, 0.14);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* Arabic: one family covers both roles. */
+[dir="rtl"] {
+  --font-display: var(--font-plex-arabic), system-ui, sans-serif;
+  --font-body: var(--font-plex-arabic), system-ui, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ===========================================================================
+   Base
+   =========================================================================== */
+
+html {
+  scroll-behavior: smooth;
+  /* Next 16 no longer forces scroll-behavior:auto during route changes, so
+     without this attribute every navigation would slow-scroll to the top
+     instead of snapping. See app/[lang]/layout.tsx where it is set. */
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100dvh; /* not 100vh — iOS Safari collapses the viewport on scroll */
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
+/* Headings: serif, tight, heavy, sentence case (never Title Case). */
+h1, h2, h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  text-wrap: balance; /* no orphans */
+}
+
+p {
+  text-wrap: pretty;
+}
+
+/* Data is read in columns — digits must not jitter. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* Measure: ~65ch. Long body copy is unreadable full-bleed. */
+.prose-measure {
+  max-width: 65ch;
+}
+
+/* ===========================================================================
+   Accessibility — not optional, do not simplify away
+   =========================================================================== */
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+/* Keyboard users need a way past the nav. Visible only when focused. */
+.skip-link {
+  position: absolute;
+  inset-inline-start: 0.5rem;
+  top: -3rem;
+  z-index: 100;
+  padding: 0.5rem 1rem;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  border-radius: var(--radius-sm);
+  transition: top 150ms ease-out;
+}
+.skip-link:focus {
+  top: 0.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+::selection {
+  background: var(--color-accent-wash);
+  color: var(--color-ink);
+}
+
+/* ===========================================================================
+   Motion
+   Scroll reveals via native CSS scroll-driven animations, so the landing page
+   stays a server component. The old build pulled framer-motion in, which forced
+   "use client" on the whole page and shipped a JS bundle to animate a fade.
+
+   Content is visible by default and the animation only enhances: browsers
+   without animation-timeline (and anyone who prefers reduced motion) simply see
+   the finished state.
+   =========================================================================== */
+
+@keyframes reveal-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal {
+      /* Longhand on purpose: the `animation` shorthand resets duration to 0s,
+         which pins a scroll-driven animation at its start frame forever — with
+         fill-mode both that means opacity:0 content that never appears.
+         Scroll-driven animations need duration:auto to map onto the range. */
+      animation-name: reveal-in;
+      animation-duration: auto;
+      animation-timing-function: linear;
+      animation-fill-mode: both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 85%;
+    }
+  }
+}
+
+/* ===========================================================================
+   Texture — the logo sits on grid paper; the page echoes it.
+   Beats a flat fill, and it is 2 gradients rather than an image request.
+   =========================================================================== */
+
+.paper-grid {
+  background-image:
+    repeating-linear-gradient(to right, rgba(56, 38, 18, 0.045) 0 1px, transparent 1px 100%),
+    repeating-linear-gradient(to bottom, rgba(56, 38, 18, 0.045) 0 1px, transparent 1px 100%);
+  background-size: 28px 28px;
+}
+
+/* Fades the grid out so it never competes with text. */
+.paper-grid-fade {
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 20%, transparent 75%);
+}
+
+/* ===========================================================================
+   Scrollbar — warm, matches the page
+   =========================================================================== */
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--color-paper-sunken); }
+::-webkit-scrollbar-thumb {
+  background: var(--color-rule-strong);
+  border-radius: 5px;
+  border: 2px solid var(--color-paper-sunken);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--color-ink-faint); }
