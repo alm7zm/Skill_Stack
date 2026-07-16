@@ -1,842 +1,163 @@
-import { Certification } from '../types';
+import { cache } from 'react';
+import { publicClient } from '@/lib/supabase/public';
+import type { Certification, CertCategory, Difficulty } from '@/lib/types';
 
-export const certifications: Certification[] = [
-  // ==================== CLOUD ====================
-  {
-    id: 'aws-saa',
-    name: 'AWS Solutions Architect – Associate',
-    shortName: 'AWS SAA-C03',
-    provider: 'Amazon Web Services',
-    providerLogo: '/providers/aws.svg',
-    category: 'cloud',
-    description: 'Validate your ability to design and implement distributed systems on AWS. This certification demonstrates your expertise in designing cost-optimized, high-performing, secure, and resilient architectures on AWS.',
-    difficulty: 'intermediate',
-    estimatedStudyHours: 120,
-    examCost: 150,
-    examCostCurrency: 'USD',
-    examDuration: 130,
-    numberOfQuestions: 65,
-    passingScore: 72,
-    languages: ['English', 'Japanese', 'Korean', 'Chinese'],
-    remoteTesting: true,
-    prerequisites: ['1+ year hands-on AWS experience recommended'],
-    careerOpportunities: [
-      { title: 'Cloud Architect', salaryMin: 120000, salaryMax: 180000, currency: 'USD' },
-      { title: 'Solutions Architect', salaryMin: 130000, salaryMax: 190000, currency: 'USD' },
-      { title: 'Cloud Engineer', salaryMin: 100000, salaryMax: 150000, currency: 'USD' },
-    ],
-    skillsGained: ['EC2', 'S3', 'VPC', 'IAM', 'Lambda', 'RDS', 'DynamoDB', 'CloudFormation', 'High Availability', 'Cost Optimization'],
-    officialUrl: 'https://aws.amazon.com/certification/certified-solutions-architect-associate/',
-    tags: ['popular', 'high-salary'],
-    trending: true,
-    color: '#FF9900',
-  },
-  {
-    id: 'aws-dva',
-    name: 'AWS Developer – Associate',
-    shortName: 'AWS DVA-C02',
-    provider: 'Amazon Web Services',
-    providerLogo: '/providers/aws.svg',
-    category: 'cloud',
-    description: 'Prove your proficiency in developing and maintaining applications on AWS. Covers core AWS services, architecture best practices, and the ability to develop, deploy, and debug cloud-based applications.',
-    difficulty: 'intermediate',
-    estimatedStudyHours: 100,
-    examCost: 150,
-    examCostCurrency: 'USD',
-    examDuration: 130,
-    numberOfQuestions: 65,
-    passingScore: 72,
-    languages: ['English', 'Japanese', 'Korean', 'Chinese'],
-    remoteTesting: true,
-    prerequisites: ['1+ year AWS development experience recommended'],
-    careerOpportunities: [
-      { title: 'Cloud Developer', salaryMin: 100000, salaryMax: 160000, currency: 'USD' },
-      { title: 'Backend Engineer', salaryMin: 110000, salaryMax: 170000, currency: 'USD' },
-    ],
-    skillsGained: ['Lambda', 'API Gateway', 'DynamoDB', 'S3', 'SQS', 'SNS', 'CloudFormation', 'CI/CD', 'Serverless'],
-    officialUrl: 'https://aws.amazon.com/certification/certified-developer-associate/',
-    tags: ['popular'],
-    color: '#FF9900',
-  },
-  {
-    id: 'aws-sap',
-    name: 'AWS Solutions Architect – Professional',
-    shortName: 'AWS SAP-C02',
-    provider: 'Amazon Web Services',
-    providerLogo: '/providers/aws.svg',
-    category: 'cloud',
-    description: 'The most prestigious AWS certification. Validates advanced technical skills and experience in designing distributed applications and systems on the AWS platform.',
-    difficulty: 'expert',
-    estimatedStudyHours: 200,
-    examCost: 300,
-    examCostCurrency: 'USD',
-    examDuration: 180,
-    numberOfQuestions: 75,
-    passingScore: 75,
-    languages: ['English', 'Japanese', 'Korean'],
-    remoteTesting: true,
-    prerequisites: ['AWS Solutions Architect Associate', '2+ years hands-on experience'],
-    careerOpportunities: [
-      { title: 'Principal Cloud Architect', salaryMin: 160000, salaryMax: 250000, currency: 'USD' },
-      { title: 'Cloud Consultant', salaryMin: 150000, salaryMax: 220000, currency: 'USD' },
-    ],
-    skillsGained: ['Multi-Account Strategy', 'Hybrid Architecture', 'Migration', 'Cost Control', 'Advanced Networking', 'Security Architecture'],
-    officialUrl: 'https://aws.amazon.com/certification/certified-solutions-architect-professional/',
-    tags: ['high-salary', 'expert'],
-    color: '#FF9900',
-  },
-  {
-    id: 'az-900',
-    name: 'Microsoft Azure Fundamentals',
-    shortName: 'AZ-900',
-    provider: 'Microsoft',
-    providerLogo: '/providers/microsoft.svg',
-    category: 'cloud',
-    description: 'Entry-level certification that validates foundational knowledge of cloud concepts, Azure services, security, privacy, compliance, and Azure pricing and support.',
-    difficulty: 'beginner',
-    estimatedStudyHours: 40,
-    examCost: 99,
-    examCostCurrency: 'USD',
-    examDuration: 65,
-    numberOfQuestions: 50,
-    passingScore: 70,
-    languages: ['English', 'Japanese', 'Chinese', 'Korean', 'French', 'German', 'Spanish', 'Arabic'],
-    remoteTesting: true,
-    prerequisites: [],
-    careerOpportunities: [
-      { title: 'Cloud Support Engineer', salaryMin: 60000, salaryMax: 90000, currency: 'USD' },
-      { title: 'IT Administrator', salaryMin: 55000, salaryMax: 85000, currency: 'USD' },
-    ],
-    skillsGained: ['Cloud Concepts', 'Azure Services', 'Azure Pricing', 'SLA', 'Lifecycle', 'Compliance'],
-    officialUrl: 'https://learn.microsoft.com/en-us/credentials/certifications/azure-fundamentals/',
-    tags: ['beginner-friendly', 'free-resources'],
-    free: false,
-    color: '#0078D4',
-  },
-  {
-    id: 'az-104',
-    name: 'Microsoft Azure Administrator',
-    shortName: 'AZ-104',
-    provider: 'Microsoft',
-    providerLogo: '/providers/microsoft.svg',
-    category: 'cloud',
-    description: 'Validate your skills in implementing, managing, and monitoring Azure environments. Covers identity, governance, storage, compute, and virtual networking.',
-    difficulty: 'intermediate',
-    estimatedStudyHours: 120,
-    examCost: 165,
-    examCostCurrency: 'USD',
-    examDuration: 120,
-    numberOfQuestions: 55,
-    passingScore: 70,
-    languages: ['English', 'Japanese', 'Chinese', 'Korean', 'French', 'German', 'Spanish'],
-    remoteTesting: true,
-    prerequisites: ['AZ-900 recommended', '6+ months Azure admin experience'],
-    careerOpportunities: [
-      { title: 'Azure Administrator', salaryMin: 90000, salaryMax: 140000, currency: 'USD' },
-      { title: 'Cloud Engineer', salaryMin: 100000, salaryMax: 150000, currency: 'USD' },
-    ],
-    skillsGained: ['Azure AD', 'Virtual Networks', 'Storage', 'Compute', 'Monitoring', 'Backup & Recovery'],
-    officialUrl: 'https://learn.microsoft.com/en-us/credentials/certifications/azure-administrator/',
-    tags: ['popular'],
-    trending: true,
-    color: '#0078D4',
-  },
-  {
-    id: 'az-305',
-    name: 'Microsoft Azure Solutions Architect Expert',
-    shortName: 'AZ-305',
-    provider: 'Microsoft',
-    providerLogo: '/providers/microsoft.svg',
-    category: 'cloud',
-    description: 'Expert-level certification for designing solutions on Azure. Covers identity, governance, data storage, business continuity, and infrastructure solutions.',
-    difficulty: 'advanced',
-    estimatedStudyHours: 160,
-    examCost: 165,
-    examCostCurrency: 'USD',
-    examDuration: 120,
-    numberOfQuestions: 50,
-    passingScore: 70,
-    languages: ['English', 'Japanese', 'Chinese', 'Korean'],
-    remoteTesting: true,
-    prerequisites: ['AZ-104', 'Experience with Azure administration'],
-    careerOpportunities: [
-      { title: 'Azure Solutions Architect', salaryMin: 140000, salaryMax: 200000, currency: 'USD' },
-      { title: 'Senior Cloud Engineer', salaryMin: 130000, salaryMax: 190000, currency: 'USD' },
-    ],
-    skillsGained: ['Solution Design', 'Identity Architecture', 'Data Platform', 'Infrastructure', 'Business Continuity', 'Governance'],
-    officialUrl: 'https://learn.microsoft.com/en-us/credentials/certifications/azure-solutions-architect/',
-    tags: ['high-salary', 'expert'],
-    color: '#0078D4',
-  },
-  {
-    id: 'gcp-ace',
-    name: 'Google Cloud Associate Cloud Engineer',
-    shortName: 'GCP ACE',
-    provider: 'Google Cloud',
-    providerLogo: '/providers/gcp.svg',
-    category: 'cloud',
-    description: 'Demonstrates ability to deploy applications, monitor operations, and manage enterprise solutions on Google Cloud Platform.',
-    difficulty: 'intermediate',
-    estimatedStudyHours: 100,
-    examCost: 200,
-    examCostCurrency: 'USD',
-    examDuration: 120,
-    numberOfQuestions: 50,
-    passingScore: 70,
-    languages: ['English', 'Japanese'],
-    remoteTesting: true,
-    prerequisites: ['6+ months GCP experience recommended'],
-    careerOpportunities: [
-      { title: 'Cloud Engineer', salaryMin: 100000, salaryMax: 155000, currency: 'USD' },
-      { title: 'DevOps Engineer', salaryMin: 110000, salaryMax: 160000, currency: 'USD' },
-    ],
-    skillsGained: ['Compute Engine', 'Kubernetes Engine', 'Cloud Storage', 'BigQuery', 'IAM', 'Networking'],
-    officialUrl: 'https://cloud.google.com/learn/certification/cloud-engineer',
-    tags: ['popular'],
-    color: '#4285F4',
-  },
-  {
-    id: 'gcp-pca',
-    name: 'Google Cloud Professional Cloud Architect',
-    shortName: 'GCP PCA',
-    provider: 'Google Cloud',
-    providerLogo: '/providers/gcp.svg',
-    category: 'cloud',
-    description: 'Professional-level certification validating the ability to design, develop, and manage robust, secure, scalable, highly available, and dynamic solutions on Google Cloud.',
-    difficulty: 'advanced',
-    estimatedStudyHours: 160,
-    examCost: 200,
-    examCostCurrency: 'USD',
-    examDuration: 120,
-    numberOfQuestions: 50,
-    passingScore: 70,
-    languages: ['English', 'Japanese'],
-    remoteTesting: true,
-    prerequisites: ['3+ years industry experience', '1+ year GCP experience'],
-    careerOpportunities: [
-      { title: 'Cloud Architect', salaryMin: 150000, salaryMax: 220000, currency: 'USD' },
-      { title: 'Principal Engineer', salaryMin: 160000, salaryMax: 240000, currency: 'USD' },
-    ],
-    skillsGained: ['Solution Design', 'Security', 'Compliance', 'Reliability', 'Migration Planning', 'Business Processes'],
-    officialUrl: 'https://cloud.google.com/learn/certification/cloud-architect',
-    tags: ['high-salary'],
-    color: '#4285F4',
-  },
+/**
+ * The certification catalog, read from public.certifications.
+ *
+ * This was a 842-line array literal in this file. It moved to the database so a
+ * wrong price can be fixed in the Supabase dashboard without a deploy, so the
+ * catalog can outgrow what is sane to hold in a JS array, so each row can carry
+ * its own verified date, and so users can report bad data against a real
+ * foreign key. See supabase/migrations/20260717000001_certifications_table.sql.
+ *
+ * Reads go through publicClient (no cookies), so pages that call these can still
+ * be prerendered. Freshness comes from each page's `export const revalidate`,
+ * which is what lets a dashboard edit appear without a rebuild.
+ */
 
-  // ==================== CYBERSECURITY ====================
-  {
-    id: 'comptia-security-plus',
-    name: 'CompTIA Security+',
-    shortName: 'Security+',
-    provider: 'CompTIA',
-    providerLogo: '/providers/comptia.svg',
-    category: 'cybersecurity',
-    description: 'The globally recognized certification for validating foundational, vendor-neutral IT security knowledge and skills. Ideal for IT security professionals starting their career.',
-    difficulty: 'intermediate',
-    estimatedStudyHours: 90,
-    examCost: 392,
-    examCostCurrency: 'USD',
-    examDuration: 90,
-    numberOfQuestions: 90,
-    passingScore: 75,
-    languages: ['English', 'Japanese', 'Portuguese'],
-    remoteTesting: true,
-    prerequisites: ['CompTIA Network+ recommended', '2 years IT experience'],
-    careerOpportunities: [
-      { title: 'Security Analyst', salaryMin: 80000, salaryMax: 120000, currency: 'USD' },
-      { title: 'Security Engineer', salaryMin: 95000, salaryMax: 145000, currency: 'USD' },
-      { title: 'SOC Analyst', salaryMin: 65000, salaryMax: 100000, currency: 'USD' },
-    ],
-    skillsGained: ['Threat Analysis', 'Risk Management', 'Cryptography', 'Identity Management', 'Network Security', 'Incident Response'],
-    officialUrl: 'https://www.comptia.org/certifications/security',
-    tags: ['popular', 'dod-approved'],
-    trending: true,
-    color: '#C8202F',
-  },
-  {
-    id: 'comptia-cysa-plus',
-    name: 'CompTIA CySA+',
-    shortName: 'CySA+',
-    provider: 'CompTIA',
-    providerLogo: '/providers/comptia.svg',
-    category: 'cybersecurity',
-    description: 'Advanced cybersecurity analyst certification. Validates skills in threat detection, data analysis, vulnerability management, and security operations.',
-    difficulty: 'advanced',
-    estimatedStudyHours: 140,
-    examCost: 392,
-    examCostCurrency: 'USD',
-    examDuration: 165,
-    numberOfQuestions: 85,
-    passingScore: 75,
-    languages: ['English', 'Japanese'],
-    remoteTesting: true,
-    prerequisites: ['Security+', '4 years security experience'],
-    careerOpportunities: [
-      { title: 'Cybersecurity Analyst', salaryMin: 95000, salaryMax: 140000, currency: 'USD' },
-      { title: 'Threat Hunter', salaryMin: 110000, salaryMax: 160000, currency: 'USD' },
-    ],
-    skillsGained: ['Threat Detection', 'SIEM', 'Vulnerability Management', 'Incident Response', 'Forensics', 'Compliance'],
-    officialUrl: 'https://www.comptia.org/certifications/cybersecurity-analyst',
-    tags: ['advanced'],
-    color: '#C8202F',
-  },
+/** Explicit, so adding a column cannot silently bloat every catalog query. */
+const COLUMNS =
+  'id, name, short_name, provider, category, description, difficulty, ' +
+  'estimated_study_hours, exam_cost, exam_cost_currency, exam_duration, ' +
+  'number_of_questions, passing_score, languages, remote_testing, prerequisites, ' +
+  'career_opportunities, skills_gained, official_url, tags, trending, free, ' +
+  'verified_at, verified_by';
 
-  // ==================== NETWORKING ====================
-  {
-    id: 'comptia-network-plus',
-    name: 'CompTIA Network+',
-    shortName: 'Network+',
-    provider: 'CompTIA',
-    providerLogo: '/providers/comptia.svg',
-    category: 'networking',
-    description: 'Validates the essential knowledge and skills needed to confidently design, configure, manage, and troubleshoot any wired and wireless network.',
-    difficulty: 'intermediate',
-    estimatedStudyHours: 80,
-    examCost: 358,
-    examCostCurrency: 'USD',
-    examDuration: 90,
-    numberOfQuestions: 90,
-    passingScore: 72,
-    languages: ['English', 'Japanese', 'German'],
-    remoteTesting: true,
-    prerequisites: ['CompTIA A+ recommended'],
-    careerOpportunities: [
-      { title: 'Network Administrator', salaryMin: 60000, salaryMax: 95000, currency: 'USD' },
-      { title: 'Network Engineer', salaryMin: 75000, salaryMax: 120000, currency: 'USD' },
-    ],
-    skillsGained: ['Network Architecture', 'Network Operations', 'Network Security', 'Troubleshooting', 'Wireless', 'Cloud Networking'],
-    officialUrl: 'https://www.comptia.org/certifications/network',
-    tags: ['foundational'],
-    color: '#C8202F',
-  },
-  {
-    id: 'cisco-ccna',
-    name: 'Cisco CCNA',
-    shortName: 'CCNA 200-301',
-    provider: 'Cisco',
-    providerLogo: '/providers/cisco.svg',
-    category: 'networking',
-    description: 'The gold standard networking certification. Covers network fundamentals, IP connectivity, security fundamentals, automation, and programmability.',
-    difficulty: 'intermediate',
-    estimatedStudyHours: 140,
-    examCost: 330,
-    examCostCurrency: 'USD',
-    examDuration: 120,
-    numberOfQuestions: 100,
-    passingScore: 82,
-    languages: ['English', 'Japanese'],
-    remoteTesting: true,
-    prerequisites: ['1+ year networking experience recommended'],
-    careerOpportunities: [
-      { title: 'Network Engineer', salaryMin: 75000, salaryMax: 120000, currency: 'USD' },
-      { title: 'Network Administrator', salaryMin: 65000, salaryMax: 100000, currency: 'USD' },
-      { title: 'Systems Engineer', salaryMin: 80000, salaryMax: 130000, currency: 'USD' },
-    ],
-    skillsGained: ['Routing', 'Switching', 'IP Services', 'Security Fundamentals', 'Automation', 'Wireless'],
-    officialUrl: 'https://www.cisco.com/site/us/en/learn/training-certifications/certifications/enterprise/ccna/index.html',
-    tags: ['popular', 'industry-standard'],
-    trending: true,
-    color: '#049FD9',
-  },
-
-  // ==================== AI & MACHINE LEARNING ====================
-  {
-    id: 'ai-900',
-    name: 'Microsoft Azure AI Fundamentals',
-    shortName: 'AI-900',
-    provider: 'Microsoft',
-    providerLogo: '/providers/microsoft.svg',
-    category: 'ai',
-    description: 'Foundational certification demonstrating knowledge of machine learning and AI concepts, and related Microsoft Azure services.',
-    difficulty: 'beginner',
-    estimatedStudyHours: 35,
-    examCost: 99,
-    examCostCurrency: 'USD',
-    examDuration: 65,
-    numberOfQuestions: 45,
-    passingScore: 70,
-    languages: ['English', 'Japanese', 'Chinese', 'Korean', 'French', 'German', 'Spanish', 'Arabic'],
-    remoteTesting: true,
-    prerequisites: [],
-    careerOpportunities: [
-      { title: 'AI Developer', salaryMin: 80000, salaryMax: 130000, currency: 'USD' },
-      { title: 'Data Analyst', salaryMin: 65000, salaryMax: 100000, currency: 'USD' },
-    ],
-    skillsGained: ['AI Workloads', 'ML Principles', 'Computer Vision', 'NLP', 'Generative AI', 'Azure AI Services'],
-    officialUrl: 'https://learn.microsoft.com/en-us/credentials/certifications/azure-ai-fundamentals/',
-    tags: ['beginner-friendly', 'free-resources'],
-    color: '#0078D4',
-  },
-  {
-    id: 'ai-102',
-    name: 'Microsoft Azure AI Engineer Associate',
-    shortName: 'AI-102',
-    provider: 'Microsoft',
-    providerLogo: '/providers/microsoft.svg',
-    category: 'ai',
-    description: 'Associate-level certification for building AI solutions using Azure Cognitive Services, Azure Bot Service, and Azure Cognitive Search.',
-    difficulty: 'advanced',
-    estimatedStudyHours: 130,
-    examCost: 165,
-    examCostCurrency: 'USD',
-    examDuration: 120,
-    numberOfQuestions: 55,
-    passingScore: 70,
-    languages: ['English', 'Japanese', 'Chinese', 'Korean'],
-    remoteTesting: true,
-    prerequisites: ['AI-900 recommended', 'Python/C# experience'],
-    careerOpportunities: [
-      { title: 'AI Engineer', salaryMin: 120000, salaryMax: 180000, currency: 'USD' },
-      { title: 'ML Engineer', salaryMin: 130000, salaryMax: 200000, currency: 'USD' },
-    ],
-    skillsGained: ['Azure Cognitive Services', 'Computer Vision', 'NLP', 'Knowledge Mining', 'Conversational AI', 'Azure OpenAI Service'],
-    officialUrl: 'https://learn.microsoft.com/en-us/credentials/certifications/azure-ai-engineer/',
-    tags: ['high-salary'],
-    trending: true,
-    color: '#0078D4',
-  },
-  {
-    id: 'tf-developer',
-    name: 'TensorFlow Developer Certificate',
-    shortName: 'TF Developer',
-    provider: 'Google',
-    providerLogo: '/providers/google.svg',
-    category: 'ai',
-    description: 'Demonstrates proficiency in using TensorFlow to develop and train ML models. Covers neural networks, image classification, NLP, and time series forecasting.',
-    difficulty: 'intermediate',
-    estimatedStudyHours: 100,
-    examCost: 100,
-    examCostCurrency: 'USD',
-    examDuration: 300,
-    numberOfQuestions: 5,
-    passingScore: 90,
-    languages: ['English'],
-    remoteTesting: true,
-    prerequisites: ['Python proficiency', 'ML fundamentals knowledge'],
-    careerOpportunities: [
-      { title: 'ML Engineer', salaryMin: 120000, salaryMax: 190000, currency: 'USD' },
-      { title: 'AI Research Engineer', salaryMin: 140000, salaryMax: 220000, currency: 'USD' },
-    ],
-    skillsGained: ['TensorFlow', 'Neural Networks', 'CNNs', 'RNNs', 'NLP', 'Time Series', 'Transfer Learning'],
-    officialUrl: 'https://www.tensorflow.org/certificate',
-    tags: ['hands-on', 'practical'],
-    color: '#FF6F00',
-  },
-  {
-    id: 'aws-ml-specialty',
-    name: 'AWS Machine Learning – Specialty',
-    shortName: 'AWS MLS-C01',
-    provider: 'Amazon Web Services',
-    providerLogo: '/providers/aws.svg',
-    category: 'ai',
-    description: 'Specialty certification for professionals who perform ML/deep learning workloads on AWS. Covers data engineering, exploratory data analysis, modeling, and ML implementation.',
-    difficulty: 'advanced',
-    estimatedStudyHours: 160,
-    examCost: 300,
-    examCostCurrency: 'USD',
-    examDuration: 180,
-    numberOfQuestions: 65,
-    passingScore: 75,
-    languages: ['English', 'Japanese', 'Korean'],
-    remoteTesting: true,
-    prerequisites: ['2+ years ML experience', 'AWS Associate certification recommended'],
-    careerOpportunities: [
-      { title: 'ML Engineer', salaryMin: 140000, salaryMax: 210000, currency: 'USD' },
-      { title: 'Data Scientist', salaryMin: 130000, salaryMax: 200000, currency: 'USD' },
-    ],
-    skillsGained: ['SageMaker', 'Data Engineering', 'Feature Engineering', 'Model Training', 'ML Operations', 'Deployment'],
-    officialUrl: 'https://aws.amazon.com/certification/certified-machine-learning-specialty/',
-    tags: ['high-salary', 'specialty'],
-    color: '#FF9900',
-  },
-
-  // ==================== PROJECT MANAGEMENT ====================
-  {
-    id: 'pmp',
-    name: 'Project Management Professional',
-    shortName: 'PMP',
-    provider: 'PMI',
-    providerLogo: '/providers/pmi.svg',
-    category: 'project-management',
-    description: 'The gold standard in project management certification. Recognized worldwide, the PMP validates your competence to lead and direct projects.',
-    difficulty: 'advanced',
-    estimatedStudyHours: 200,
-    examCost: 555,
-    examCostCurrency: 'USD',
-    examDuration: 230,
-    numberOfQuestions: 180,
-    passingScore: 60,
-    languages: ['English', 'Japanese', 'Chinese', 'Korean', 'French', 'German', 'Spanish', 'Arabic', 'Portuguese'],
-    remoteTesting: true,
-    prerequisites: ['35 hours PM education', '3-5 years project leadership experience'],
-    careerOpportunities: [
-      { title: 'Project Manager', salaryMin: 95000, salaryMax: 150000, currency: 'USD' },
-      { title: 'Program Manager', salaryMin: 120000, salaryMax: 180000, currency: 'USD' },
-      { title: 'Portfolio Manager', salaryMin: 140000, salaryMax: 200000, currency: 'USD' },
-    ],
-    skillsGained: ['Agile', 'Predictive PM', 'Stakeholder Management', 'Risk Management', 'Budgeting', 'Leadership'],
-    officialUrl: 'https://www.pmi.org/certifications/project-management-pmp',
-    tags: ['popular', 'high-salary', 'industry-standard'],
-    trending: true,
-    color: '#0A66C2',
-  },
-  {
-    id: 'capm',
-    name: 'Certified Associate in Project Management',
-    shortName: 'CAPM',
-    provider: 'PMI',
-    providerLogo: '/providers/pmi.svg',
-    category: 'project-management',
-    description: 'Entry-level project management certification that demonstrates your understanding of fundamental project management concepts, processes, and terminology.',
-    difficulty: 'beginner',
-    estimatedStudyHours: 60,
-    examCost: 300,
-    examCostCurrency: 'USD',
-    examDuration: 180,
-    numberOfQuestions: 150,
-    passingScore: 60,
-    languages: ['English', 'Japanese', 'Chinese', 'Korean', 'Spanish', 'Portuguese'],
-    remoteTesting: true,
-    prerequisites: ['23 hours PM education'],
-    careerOpportunities: [
-      { title: 'Junior Project Manager', salaryMin: 55000, salaryMax: 80000, currency: 'USD' },
-      { title: 'Project Coordinator', salaryMin: 50000, salaryMax: 75000, currency: 'USD' },
-    ],
-    skillsGained: ['PM Fundamentals', 'Project Lifecycle', 'Scope Management', 'Schedule Management', 'Cost Management'],
-    officialUrl: 'https://www.pmi.org/certifications/certified-associate-capm',
-    tags: ['beginner-friendly'],
-    color: '#0A66C2',
-  },
-  {
-    id: 'psm-1',
-    name: 'Professional Scrum Master I',
-    shortName: 'PSM I',
-    provider: 'Scrum.org',
-    providerLogo: '/providers/scrum.svg',
-    category: 'project-management',
-    description: 'Validates your knowledge of Scrum framework, Scrum Master accountabilities, and how to apply Scrum. Globally recognized agile certification.',
-    difficulty: 'intermediate',
-    estimatedStudyHours: 50,
-    examCost: 200,
-    examCostCurrency: 'USD',
-    examDuration: 60,
-    numberOfQuestions: 80,
-    passingScore: 85,
-    languages: ['English'],
-    remoteTesting: true,
-    prerequisites: [],
-    careerOpportunities: [
-      { title: 'Scrum Master', salaryMin: 90000, salaryMax: 140000, currency: 'USD' },
-      { title: 'Agile Coach', salaryMin: 110000, salaryMax: 170000, currency: 'USD' },
-    ],
-    skillsGained: ['Scrum Framework', 'Sprint Planning', 'Retrospectives', 'Servant Leadership', 'Agile Principles', 'Team Facilitation'],
-    officialUrl: 'https://www.scrum.org/assessments/professional-scrum-master-i-certification',
-    tags: ['popular', 'agile'],
-    color: '#009FDA',
-  },
-
-  // ==================== DEVOPS ====================
-  {
-    id: 'cka',
-    name: 'Certified Kubernetes Administrator',
-    shortName: 'CKA',
-    provider: 'CNCF',
-    providerLogo: '/providers/cncf.svg',
-    category: 'devops',
-    description: 'Performance-based certification that demonstrates competency in Kubernetes administration. Covers cluster architecture, workloads, networking, storage, and troubleshooting.',
-    difficulty: 'advanced',
-    estimatedStudyHours: 120,
-    examCost: 395,
-    examCostCurrency: 'USD',
-    examDuration: 120,
-    numberOfQuestions: 17,
-    passingScore: 66,
-    languages: ['English', 'Japanese', 'Chinese'],
-    remoteTesting: true,
-    prerequisites: ['Linux command line proficiency', 'Container basics'],
-    careerOpportunities: [
-      { title: 'Kubernetes Administrator', salaryMin: 110000, salaryMax: 170000, currency: 'USD' },
-      { title: 'Platform Engineer', salaryMin: 130000, salaryMax: 190000, currency: 'USD' },
-    ],
-    skillsGained: ['Cluster Setup', 'Workload Management', 'Networking', 'Storage', 'Security', 'Troubleshooting'],
-    officialUrl: 'https://www.cncf.io/certification/cka/',
-    tags: ['hands-on', 'performance-based'],
-    trending: true,
-    color: '#326CE5',
-  },
-  {
-    id: 'ckad',
-    name: 'Certified Kubernetes Application Developer',
-    shortName: 'CKAD',
-    provider: 'CNCF',
-    providerLogo: '/providers/cncf.svg',
-    category: 'devops',
-    description: 'Validates skills in designing, building, configuring, and exposing cloud native applications for Kubernetes.',
-    difficulty: 'intermediate',
-    estimatedStudyHours: 80,
-    examCost: 395,
-    examCostCurrency: 'USD',
-    examDuration: 120,
-    numberOfQuestions: 16,
-    passingScore: 66,
-    languages: ['English', 'Japanese', 'Chinese'],
-    remoteTesting: true,
-    prerequisites: ['Container fundamentals', 'Basic Kubernetes knowledge'],
-    careerOpportunities: [
-      { title: 'Cloud Native Developer', salaryMin: 100000, salaryMax: 160000, currency: 'USD' },
-      { title: 'DevOps Engineer', salaryMin: 110000, salaryMax: 170000, currency: 'USD' },
-    ],
-    skillsGained: ['Pod Design', 'Configuration', 'Multi-Container Pods', 'Observability', 'Services & Networking', 'State Persistence'],
-    officialUrl: 'https://www.cncf.io/certification/ckad/',
-    tags: ['hands-on', 'performance-based'],
-    color: '#326CE5',
-  },
-  {
-    id: 'terraform-associate',
-    name: 'HashiCorp Terraform Associate',
-    shortName: 'Terraform Associate',
-    provider: 'HashiCorp',
-    providerLogo: '/providers/hashicorp.svg',
-    category: 'devops',
-    description: 'Validates foundational knowledge of Infrastructure as Code concepts using Terraform. Covers Terraform CLI, state, modules, and workflow.',
-    difficulty: 'intermediate',
-    estimatedStudyHours: 60,
-    examCost: 70,
-    examCostCurrency: 'USD',
-    examDuration: 60,
-    numberOfQuestions: 57,
-    passingScore: 70,
-    languages: ['English'],
-    remoteTesting: true,
-    prerequisites: ['Basic cloud infrastructure knowledge'],
-    careerOpportunities: [
-      { title: 'Infrastructure Engineer', salaryMin: 100000, salaryMax: 155000, currency: 'USD' },
-      { title: 'DevOps Engineer', salaryMin: 110000, salaryMax: 165000, currency: 'USD' },
-    ],
-    skillsGained: ['HCL', 'Terraform CLI', 'State Management', 'Modules', 'Providers', 'Terraform Cloud'],
-    officialUrl: 'https://www.hashicorp.com/certification/terraform-associate',
-    tags: ['affordable', 'iac'],
-    color: '#7B42BC',
-  },
-
-  // ==================== PROGRAMMING ====================
-  {
-    id: 'pcep',
-    name: 'PCEP – Certified Entry-Level Python Programmer',
-    shortName: 'PCEP',
-    provider: 'Python Institute',
-    providerLogo: '/providers/python.svg',
-    category: 'programming',
-    description: 'Entry-level certification validating foundational Python programming skills. Covers data types, control flow, data collections, functions, and basic OOP.',
-    difficulty: 'beginner',
-    estimatedStudyHours: 40,
-    examCost: 59,
-    examCostCurrency: 'USD',
-    examDuration: 40,
-    numberOfQuestions: 30,
-    passingScore: 70,
-    languages: ['English'],
-    remoteTesting: true,
-    prerequisites: [],
-    careerOpportunities: [
-      { title: 'Junior Python Developer', salaryMin: 55000, salaryMax: 80000, currency: 'USD' },
-      { title: 'QA Automation Engineer', salaryMin: 60000, salaryMax: 90000, currency: 'USD' },
-    ],
-    skillsGained: ['Python Syntax', 'Data Types', 'Control Flow', 'Functions', 'Data Collections', 'Basic I/O'],
-    officialUrl: 'https://pythoninstitute.org/pcep',
-    tags: ['beginner-friendly', 'affordable'],
-    free: false,
-    color: '#3776AB',
-  },
-  {
-    id: 'pcap',
-    name: 'PCAP – Certified Associate in Python Programming',
-    shortName: 'PCAP',
-    provider: 'Python Institute',
-    providerLogo: '/providers/python.svg',
-    category: 'programming',
-    description: 'Associate-level certification covering intermediate Python concepts including OOP, modules, packages, exception handling, and file processing.',
-    difficulty: 'intermediate',
-    estimatedStudyHours: 70,
-    examCost: 295,
-    examCostCurrency: 'USD',
-    examDuration: 65,
-    numberOfQuestions: 40,
-    passingScore: 70,
-    languages: ['English'],
-    remoteTesting: true,
-    prerequisites: ['PCEP recommended'],
-    careerOpportunities: [
-      { title: 'Python Developer', salaryMin: 80000, salaryMax: 130000, currency: 'USD' },
-      { title: 'Data Analyst', salaryMin: 70000, salaryMax: 110000, currency: 'USD' },
-    ],
-    skillsGained: ['OOP', 'Modules & Packages', 'Exception Handling', 'File Processing', 'Generators', 'List Comprehensions'],
-    officialUrl: 'https://pythoninstitute.org/pcap',
-    tags: ['intermediate'],
-    color: '#3776AB',
-  },
-
-  // ==================== FOUNDATIONAL ====================
-  {
-    id: 'comptia-a-plus',
-    name: 'CompTIA A+',
-    shortName: 'A+',
-    provider: 'CompTIA',
-    providerLogo: '/providers/comptia.svg',
-    category: 'networking',
-    description: 'The industry standard for establishing a career in IT. Covers hardware, software, networking, security, and troubleshooting fundamentals.',
-    difficulty: 'beginner',
-    estimatedStudyHours: 120,
-    examCost: 358,
-    examCostCurrency: 'USD',
-    examDuration: 90,
-    numberOfQuestions: 90,
-    passingScore: 70,
-    languages: ['English', 'Japanese', 'German'],
-    remoteTesting: true,
-    prerequisites: [],
-    careerOpportunities: [
-      { title: 'IT Support Technician', salaryMin: 40000, salaryMax: 65000, currency: 'USD' },
-      { title: 'Help Desk Analyst', salaryMin: 42000, salaryMax: 60000, currency: 'USD' },
-      { title: 'Desktop Support', salaryMin: 45000, salaryMax: 70000, currency: 'USD' },
-    ],
-    skillsGained: ['Hardware', 'Software', 'Networking', 'Mobile Devices', 'Troubleshooting', 'Security Basics', 'OS Installation'],
-    officialUrl: 'https://www.comptia.org/certifications/a',
-    tags: ['beginner-friendly', 'foundational'],
-    color: '#C8202F',
-  },
-  {
-    id: 'gcp-pde',
-    name: 'Google Cloud Professional Data Engineer',
-    shortName: 'GCP PDE',
-    provider: 'Google Cloud',
-    providerLogo: '/providers/gcp.svg',
-    category: 'data',
-    description: 'Professional certification for designing, building, and operationalizing data processing systems on Google Cloud. Covers data pipelines, ML models, and data governance.',
-    difficulty: 'advanced',
-    estimatedStudyHours: 150,
-    examCost: 200,
-    examCostCurrency: 'USD',
-    examDuration: 120,
-    numberOfQuestions: 50,
-    passingScore: 70,
-    languages: ['English', 'Japanese'],
-    remoteTesting: true,
-    prerequisites: ['3+ years industry experience', '1+ year GCP experience'],
-    careerOpportunities: [
-      { title: 'Data Engineer', salaryMin: 120000, salaryMax: 180000, currency: 'USD' },
-      { title: 'Senior Data Engineer', salaryMin: 150000, salaryMax: 210000, currency: 'USD' },
-    ],
-    skillsGained: ['BigQuery', 'Dataflow', 'Pub/Sub', 'Dataproc', 'Data Pipelines', 'ML Integration'],
-    officialUrl: 'https://cloud.google.com/learn/certification/data-engineer',
-    tags: ['high-salary', 'data'],
-    color: '#4285F4',
-  },
-  {
-    id: 'aws-soa',
-    name: 'AWS SysOps Administrator – Associate',
-    shortName: 'AWS SOA-C02',
-    provider: 'Amazon Web Services',
-    providerLogo: '/providers/aws.svg',
-    category: 'cloud',
-    description: 'Validates technical expertise in deployment, management, and operations on the AWS platform. Covers monitoring, high availability, and security management.',
-    difficulty: 'intermediate',
-    estimatedStudyHours: 100,
-    examCost: 150,
-    examCostCurrency: 'USD',
-    examDuration: 180,
-    numberOfQuestions: 65,
-    passingScore: 72,
-    languages: ['English', 'Japanese', 'Korean'],
-    remoteTesting: true,
-    prerequisites: ['1 year AWS operations experience'],
-    careerOpportunities: [
-      { title: 'SysOps Administrator', salaryMin: 85000, salaryMax: 130000, currency: 'USD' },
-      { title: 'Cloud Operations Engineer', salaryMin: 90000, salaryMax: 140000, currency: 'USD' },
-    ],
-    skillsGained: ['CloudWatch', 'Systems Manager', 'Auto Scaling', 'Elastic Load Balancing', 'Backup', 'Cost Management'],
-    officialUrl: 'https://aws.amazon.com/certification/certified-sysops-admin-associate/',
-    tags: ['operations'],
-    color: '#FF9900',
-  },
-  {
-    id: 'lpic-1',
-    name: 'LPIC-1: Linux Administrator',
-    shortName: 'LPIC-1',
-    provider: 'LPI',
-    providerLogo: '/providers/lpi.svg',
-    category: 'devops',
-    description: 'First certification in the LPI multi-level professional program. Validates ability to perform maintenance tasks on the command line, install and configure a Linux computer, and configure basic networking.',
-    difficulty: 'intermediate',
-    estimatedStudyHours: 90,
-    examCost: 200,
-    examCostCurrency: 'USD',
-    examDuration: 90,
-    numberOfQuestions: 60,
-    passingScore: 50,
-    languages: ['English', 'Japanese', 'German', 'Portuguese', 'Spanish'],
-    remoteTesting: true,
-    prerequisites: [],
-    careerOpportunities: [
-      { title: 'Linux Administrator', salaryMin: 70000, salaryMax: 110000, currency: 'USD' },
-      { title: 'Systems Administrator', salaryMin: 75000, salaryMax: 120000, currency: 'USD' },
-    ],
-    skillsGained: ['System Architecture', 'Linux Installation', 'Package Management', 'GNU Commands', 'Shells & Scripting', 'Networking Fundamentals'],
-    officialUrl: 'https://www.lpi.org/our-certifications/lpic-1-overview',
-    tags: ['linux', 'foundational'],
-    color: '#FCC624',
-  },
-];
-
-// Helper functions for data access
-export function getCertificationById(id: string): Certification | undefined {
-  return certifications.find(c => c.id === id);
+interface Row {
+  id: string;
+  name: string;
+  short_name: string;
+  provider: string;
+  category: string;
+  description: string;
+  difficulty: string;
+  estimated_study_hours: number;
+  exam_cost: string | number;
+  exam_cost_currency: string;
+  exam_duration: number;
+  number_of_questions: number;
+  passing_score: number;
+  languages: string[] | null;
+  remote_testing: boolean;
+  prerequisites: string[] | null;
+  career_opportunities: Certification['careerOpportunities'] | null;
+  skills_gained: string[] | null;
+  official_url: string;
+  tags: string[] | null;
+  trending: boolean;
+  free: boolean;
+  verified_at: string;
+  verified_by: string | null;
 }
 
-export function getCertificationsByCategory(category: string): Certification[] {
-  return certifications.filter(c => c.category === category);
-}
-
-export function getTrendingCertifications(): Certification[] {
-  return certifications.filter(c => c.trending);
-}
-
-export function getFreeCertifications(): Certification[] {
-  return certifications.filter(c => c.free);
-}
-
-export function getHighSalaryCertifications(): Certification[] {
-  return certifications.filter(c => c.tags.includes('high-salary'));
-}
-
-export function getBeginnerCertifications(): Certification[] {
-  return certifications.filter(c => c.difficulty === 'beginner');
-}
-
-export function searchCertifications(query: string): Certification[] {
-  const q = query.toLowerCase();
-  return certifications.filter(c =>
-    c.name.toLowerCase().includes(q) ||
-    c.shortName.toLowerCase().includes(q) ||
-    c.provider.toLowerCase().includes(q) ||
-    c.category.toLowerCase().includes(q) ||
-    c.skillsGained.some(s => s.toLowerCase().includes(q)) ||
-    c.tags.some(t => t.toLowerCase().includes(q))
-  );
+function toCertification(row: Row): Certification {
+  return {
+    id: row.id,
+    name: row.name,
+    shortName: row.short_name,
+    provider: row.provider,
+    category: row.category as CertCategory,
+    description: row.description,
+    difficulty: row.difficulty as Difficulty,
+    estimatedStudyHours: row.estimated_study_hours,
+    // numeric(10,2) arrives as a string from PostgREST — JS numbers cannot hold
+    // every numeric exactly, so the driver refuses to guess. Unary + here means
+    // formatCurrency gets 150 rather than the string "150.00".
+    examCost: Number(row.exam_cost),
+    examCostCurrency: row.exam_cost_currency,
+    examDuration: row.exam_duration,
+    numberOfQuestions: row.number_of_questions,
+    passingScore: row.passing_score,
+    languages: row.languages ?? [],
+    remoteTesting: row.remote_testing,
+    prerequisites: row.prerequisites ?? [],
+    careerOpportunities: row.career_opportunities ?? [],
+    skillsGained: row.skills_gained ?? [],
+    officialUrl: row.official_url,
+    tags: row.tags ?? [],
+    trending: row.trending,
+    free: row.free,
+    verifiedAt: row.verified_at,
+    verifiedBy: row.verified_by ?? undefined,
+  };
 }
 
 /**
- * When the exam costs, durations and requirements above were last checked
- * against the providers' own pages.
- *
- * None of AWS, Microsoft, Google, CompTIA or Cisco publish a public API for
- * their certification catalogue or pricing, and scraping their pages breaks on
- * every redesign and sits badly with their terms. So this data is curated by
- * hand — which means it goes stale silently unless the app admits when it was
- * last verified.
- *
- * Bump this date whenever you re-check the catalogue. The certification page
- * shows it next to a link to the provider, so nobody pays an exam fee on the
- * strength of a number we last looked at a year ago.
+ * cache() dedupes per request, not across requests: a page that needs the
+ * catalog twice (list + count) issues one query. Cross-request caching is the
+ * page's `revalidate`, deliberately — that keeps the staleness window in one
+ * obvious place rather than hidden in this module.
  */
-export const CATALOG_VERIFIED = '2026-07-17';
+export const getAllCertifications = cache(async (): Promise<Certification[]> => {
+  const { data, error } = await publicClient
+    .from('certifications')
+    .select(COLUMNS)
+    .order('name');
+
+  // Throw rather than return []: an empty catalog and a broken database look
+  // identical to every caller, and "no certifications exist" is a lie that
+  // renders as a normal empty state nobody investigates.
+  if (error) throw new Error(`Failed to load certifications: ${error.message}`);
+  return (data as unknown as Row[]).map(toCertification);
+});
+
+export const getCertificationById = cache(
+  async (id: string): Promise<Certification | undefined> => {
+    const { data, error } = await publicClient
+      .from('certifications')
+      .select(COLUMNS)
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error) throw new Error(`Failed to load certification ${id}: ${error.message}`);
+    return data ? toCertification(data as unknown as Row) : undefined;
+  }
+);
+
+export const getTrendingCertifications = cache(async (): Promise<Certification[]> => {
+  const { data, error } = await publicClient
+    .from('certifications')
+    .select(COLUMNS)
+    .eq('trending', true)
+    .order('name');
+
+  if (error) throw new Error(`Failed to load trending certifications: ${error.message}`);
+  return (data as unknown as Row[]).map(toCertification);
+});
+
+/**
+ * Filtering in Postgres rather than in JS — the point of the move. Every filter
+ * is optional and they compose.
+ *
+ * `q` matches search_text, a trigger-maintained flattening of name, short name,
+ * provider, category, skills and tags. The old JS search matched substrings
+ * *inside* skills and tags, so filtering on the array columns directly would
+ * quietly return fewer results than before.
+ */
+export async function searchCertifications({
+  q = '',
+  category = '',
+  difficulty = '',
+}: {
+  q?: string;
+  category?: string;
+  difficulty?: string;
+} = {}): Promise<Certification[]> {
+  let query = publicClient.from('certifications').select(COLUMNS);
+
+  const term = q.trim();
+  // The pattern is passed to PostgREST verbatim (postgrest-js does no escaping),
+  // so a % or _ typed into the search box would act as a SQL wildcard. Escaping
+  // them costs nothing and leaves ordinary terms untouched.
+  // ponytail: PostgREST also maps * onto %, which this does not handle — a
+  // literal * still wildcards. No certification name contains one; fix it when
+  // one does.
+  if (term) query = query.ilike('search_text', `%${term.replace(/[%_]/g, '\\$&')}%`);
+  if (category) query = query.eq('category', category);
+  if (difficulty) query = query.eq('difficulty', difficulty);
+
+  const { data, error } = await query.order('name');
+  if (error) throw new Error(`Certification search failed: ${error.message}`);
+  return (data as unknown as Row[]).map(toCertification);
+}

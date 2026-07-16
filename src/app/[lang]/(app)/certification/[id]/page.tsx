@@ -3,17 +3,31 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { getDictionary } from '../../../dictionaries';
 import { isLocale } from '@/lib/i18n';
-import { CATALOG_VERIFIED, certifications, getCertificationById } from '@/lib/data/certifications';
+import { getCertificationById } from '@/lib/data/certifications';
 import { getResourcesForCertification } from '@/lib/data/resources';
+import { getUser } from '@/lib/supabase/server';
 import { formatCurrency, formatDate, formatNumber, formatStudyTime, interpolate } from '@/lib/utils';
 import { Card, CardWell } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { DifficultyMeter } from '@/components/ui/difficulty-meter';
 import { ButtonLink } from '@/components/ui/button';
+import { ReportButton } from '@/components/app/report-button';
 
-export async function generateStaticParams() {
-  return certifications.map((c) => ({ id: c.id }));
-}
+/**
+ * Rendered per request, and deliberately not prerendered.
+ *
+ * This started as `export const revalidate = 3600` + generateStaticParams. The
+ * build output showed the route as ƒ (Dynamic) anyway: the (app) layout calls
+ * getUser() to draw the nav, reading cookies opts the whole segment into dynamic
+ * rendering, and a page under it cannot be prerendered no matter what it exports.
+ * Both were dead code, so they are gone.
+ *
+ * Being dynamic is the better answer here regardless: correcting a price in the
+ * Supabase dashboard shows up on the next request rather than up to an hour
+ * later, and the read is a primary-key lookup on a table of a few dozen rows.
+ * If this ever needs prerendering, the thing to change is the layout's cookie
+ * read (or reach for Cache Components), not this file.
+ */
 
 export async function generateMetadata({
   params,
@@ -21,7 +35,7 @@ export async function generateMetadata({
   params: Promise<{ lang: string; id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const cert = getCertificationById(id);
+  const cert = await getCertificationById(id);
   if (!cert) return {};
   return { title: `${cert.name} — SkillStack`, description: cert.description };
 }
@@ -34,12 +48,18 @@ export default async function CertificationPage({
   const { lang, id } = await params;
   if (!isLocale(lang)) notFound();
 
-  const cert = getCertificationById(id);
+  const cert = await getCertificationById(id);
   if (!cert) notFound();
 
   const dict = await getDictionary(lang);
   const t = dict.certification;
   const resources = getResourcesForCertification(cert.id);
+  // Free: the (app) layout already reads cookies to draw the nav, so this route
+  // is server-rendered per request either way. Knowing this up front means a
+  // signed-out visitor is sent to sign in *before* writing a report, rather than
+  // after — a form action resets the form, so asking afterwards discards
+  // everything they just typed.
+  const user = await getUser();
 
   const facts = [
     {
@@ -103,13 +123,42 @@ export default async function CertificationPage({
         {/* The catalogue is curated by hand — no provider publishes an API for
             it — so it goes stale silently. Saying when it was last checked, next
             to a link to the source, is the difference between reference data and
-            a number someone books a $300 exam on. */}
-        <p className="mt-5 text-xs text-ink-faint">
-          {interpolate(t.verified, {
-            date: formatDate(CATALOG_VERIFIED, lang),
-            provider: cert.provider,
-          })}
-        </p>
+            a number someone books a $300 exam on.
+
+            This date is now per-certification rather than one constant for all
+            of them, so re-checking this exam's price no longer claims that every
+            other row was re-checked too. */}
+        {/* div, not p: ReportButton renders a <dialog>, which is flow content and
+            cannot legally sit inside a <p>. The browser closes the paragraph
+            early and hydration then mismatches. */}
+        <div className="mt-5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-faint">
+          <span>
+            {interpolate(t.verified, {
+              date: formatDate(cert.verifiedAt, lang),
+              provider: cert.provider,
+            })}
+          </span>
+          <ReportButton
+            certId={cert.id}
+            lang={lang}
+            signedIn={!!user}
+            labels={{
+              open: t.report.open,
+              title: t.report.title,
+              body: t.report.body,
+              fieldLabel: t.report.fieldLabel,
+              fields: t.report.fields,
+              messageLabel: t.report.messageLabel,
+              messagePlaceholder: t.report.messagePlaceholder,
+              submit: t.report.submit,
+              sending: t.report.sending,
+              thanks: t.report.thanks,
+              signIn: t.report.signIn,
+              error: t.report.error,
+              cancel: dict.common.cancel,
+            }}
+          />
+        </div>
       </header>
 
       <div className="mt-10 grid gap-10 md:grid-cols-12">

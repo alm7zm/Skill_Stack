@@ -1,6 +1,5 @@
 import { google } from '@ai-sdk/google';
 import { z } from 'zod';
-import { certifications } from '@/lib/data/certifications';
 import type { Certification } from '@/lib/types';
 import type { Locale } from '@/lib/i18n';
 
@@ -46,7 +45,15 @@ const LANGUAGE: Record<Locale, string> = {
   ar: 'Modern Standard Arabic',
 };
 
-export function systemPrompt(cert: Certification | undefined, locale: Locale): string {
+/**
+ * `catalog` is passed in rather than imported: the catalog is a database read
+ * now, and this module stays synchronous and testable by not doing I/O.
+ */
+export function systemPrompt(
+  cert: Certification | undefined,
+  locale: Locale,
+  catalog: Certification[]
+): string {
   return [
     'You are the SkillStack certification advisor.',
     `Reply only in ${LANGUAGE[locale]}. Keep certification names, provider names and technical terms in their original form.`,
@@ -65,7 +72,7 @@ export function systemPrompt(cert: Certification | undefined, locale: Locale): s
     // Practitioner, which is a correct real-world answer and a dead end here.
     'You may only recommend a certification from this list. It is everything SkillStack carries.',
     'If the best real-world answer is not on the list, say that SkillStack does not cover it yet rather than naming it as a next step.',
-    certifications.map((c) => `- ${c.name} (${c.shortName}) — ${c.difficulty}`).join('\n'),
+    catalog.map((c) => `- ${c.name} (${c.shortName}) — ${c.difficulty}`).join('\n'),
     '',
     cert
       ? [

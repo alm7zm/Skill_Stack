@@ -13,7 +13,7 @@ export default async function AdvisorPage({
   const { lang, certId } = await params;
   if (!isLocale(lang)) notFound();
 
-  const cert = getCertificationById(certId);
+  const cert = await getCertificationById(certId);
   if (!cert) notFound();
 
   const dict = await getDictionary(lang);

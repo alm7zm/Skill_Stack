@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
-import { getCertificationById } from './certifications';
+import { getAllCertifications, getCertificationById } from './certifications';
 import { computeStreak } from '@/lib/streak';
 import type { Certification, StudyWeek } from '@/lib/types';
 
@@ -9,13 +9,12 @@ export { computeStreak };
  * Real reads against Supabase, replacing the hardcoded arrays and useCounter(12)
  * the old dashboard shipped.
  *
- * The certification catalog stays in certifications.ts: the schema has no
- * certifications table and study_plans.certification_id is a plain text key, so
- * the catalog is reference data, not user data. Only user-owned rows live in the DB.
- *
- * Every query relies on RLS to scope rows to the caller — none of them filter by
- * user_id in application code, because a filter you can forget is not a security
- * boundary.
+ * Plans are user data and go through the request-scoped client, so RLS scopes
+ * every row to the caller — none of these filter by user_id in application code,
+ * because a filter you can forget is not a security boundary. The catalog is
+ * public reference data and goes through the cookie-free client instead; joining
+ * the two happens here, in memory, rather than in Postgres, because
+ * study_plans.certification_id is a plain text key with no FK to certifications.
  */
 
 /**
@@ -86,16 +85,28 @@ export async function getPlan(planId: string): Promise<PlanWithProgress | null> 
   if (topicError) throw new Error(`Failed to load topics: ${topicError.message}`);
   if (!row) return null;
 
-  return withProgress(row as PlanRow, (topics ?? []) as TopicRow[]);
+  return withProgress(
+    row as PlanRow,
+    (topics ?? []) as TopicRow[],
+    await getCertificationById((row as PlanRow).certification_id)
+  );
 }
 
-function withProgress(row: PlanRow, topics: TopicRow[]): PlanWithProgress {
+/**
+ * Synchronous and takes the certification rather than fetching it: this is
+ * called once per plan, so a lookup inside would be one query per plan.
+ */
+function withProgress(
+  row: PlanRow,
+  topics: TopicRow[],
+  certification: Certification | undefined
+): PlanWithProgress {
   const total = row.plan?.weeks.reduce((sum, w) => sum + w.topics.length, 0) ?? 0;
   const done = topics.filter((t) => t.completed).length;
 
   return {
     row,
-    certification: getCertificationById(row.certification_id),
+    certification,
     topics,
     done,
     total,
@@ -119,14 +130,19 @@ export async function getDashboard(): Promise<DashboardData> {
     return { plans: [], streak: 0, topicsDone: 0, hoursPlanned: 0, readiness: 0 };
   }
 
-  const { data: topics, error } = await supabase
-    .from('study_plan_topics')
-    .select('study_plan_id, topic_id, completed, completed_at, calendar_event_id')
-    .in(
-      'study_plan_id',
-      plans.map((p) => p.id)
-    );
+  // One catalog read for every plan on the dashboard, not one per plan.
+  const [{ data: topics, error }, catalog] = await Promise.all([
+    supabase
+      .from('study_plan_topics')
+      .select('study_plan_id, topic_id, completed, completed_at, calendar_event_id')
+      .in(
+        'study_plan_id',
+        plans.map((p) => p.id)
+      ),
+    getAllCertifications(),
+  ]);
   if (error) throw new Error(`Failed to load progress: ${error.message}`);
+  const byId = new Map(catalog.map((c) => [c.id, c]));
 
   const byPlan = new Map<string, TopicRow[]>();
   for (const t of topics ?? []) {
@@ -135,7 +151,9 @@ export async function getDashboard(): Promise<DashboardData> {
     byPlan.set(t.study_plan_id, list);
   }
 
-  const withProgressList = plans.map((p) => withProgress(p, byPlan.get(p.id) ?? []));
+  const withProgressList = plans.map((p) =>
+    withProgress(p, byPlan.get(p.id) ?? [], byId.get(p.certification_id))
+  );
 
   const hoursPlanned = withProgressList.reduce(
     (sum, p) => sum + (p.row.plan?.weeks.reduce((h, w) => h + w.estimatedHours, 0) ?? 0),

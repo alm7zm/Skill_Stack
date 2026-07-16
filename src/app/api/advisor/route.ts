@@ -1,6 +1,6 @@
 import { streamText } from 'ai';
 import { getUser } from '@/lib/supabase/server';
-import { getCertificationById } from '@/lib/data/certifications';
+import { getAllCertifications, getCertificationById } from '@/lib/data/certifications';
 import { advisorModel, chatRequestSchema, systemPrompt } from '@/lib/ai/advisor';
 
 /**
@@ -35,11 +35,14 @@ export async function POST(req: Request) {
   }
 
   const { certId, locale, messages } = parsed.data;
-  const cert = getCertificationById(certId);
+  const [cert, catalog] = await Promise.all([
+    getCertificationById(certId),
+    getAllCertifications(),
+  ]);
 
   const result = streamText({
     model: advisorModel,
-    system: systemPrompt(cert, locale),
+    system: systemPrompt(cert, locale, catalog),
     messages,
     // The response has already been sent with a 200 by the time the provider can
     // fail, so a mid-stream error cannot become an HTTP status. Without this it

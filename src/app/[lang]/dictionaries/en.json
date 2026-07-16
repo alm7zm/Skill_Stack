@@ -205,7 +205,28 @@
     "noPrerequisites": "No formal prerequisites.",
     "startPlan": "Plan this certification",
     "askAdvisor": "Ask the advisor",
-    "verified": "Exam details last checked {date}. Providers change prices — confirm on {provider} before you pay."
+    "verified": "Exam details last checked {date}. Providers change prices — confirm on {provider} before you pay.",
+    "report": {
+      "open": "Something wrong?",
+      "title": "Report incorrect information",
+      "body": "This catalog is maintained by hand, so it goes out of date. Tell us what's wrong and we'll check it.",
+      "fieldLabel": "What's wrong?",
+      "fields": {
+        "exam_cost": "The exam cost",
+        "study_hours": "The study time",
+        "exam_details": "Exam length, questions or pass mark",
+        "prerequisites": "The prerequisites",
+        "url": "The link to the provider",
+        "other": "Something else"
+      },
+      "messageLabel": "What should it say?",
+      "messagePlaceholder": "The exam is now $175, not $150 — I paid it last week.",
+      "submit": "Send report",
+      "sending": "Sending",
+      "thanks": "Thank you. We'll check it against the provider.",
+      "signIn": "Sign in to send a report.",
+      "error": "That didn't send. Please try again."
+    }
   },
   "advisor": {
     "title": "Advisor",

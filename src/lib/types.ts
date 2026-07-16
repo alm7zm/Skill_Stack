@@ -12,12 +12,12 @@ export type CertCategory =
 
 export type Difficulty = 'beginner' | 'intermediate' | 'advanced' | 'expert';
 
+/** Row of public.certifications, camelCased. See lib/data/certifications.ts. */
 export interface Certification {
   id: string;
   name: string;
   shortName: string;
   provider: string;
-  providerLogo: string;
   category: CertCategory;
   description: string;
   difficulty: Difficulty;
@@ -34,10 +34,22 @@ export interface Certification {
   skillsGained: string[];
   officialUrl: string;
   tags: string[];
-  trending?: boolean;
-  free?: boolean;
-  color: string; // Brand accent color
+  trending: boolean;
+  free: boolean;
+  /** When a person last checked this row against officialUrl. Per-cert: one
+   *  global constant meant re-checking one price implied re-checking all 28. */
+  verifiedAt: string;
+  verifiedBy?: string;
 }
+
+/** What a user can tell us is wrong. Mirrors the certification_reports check. */
+export type ReportField =
+  | 'exam_cost'
+  | 'study_hours'
+  | 'exam_details'
+  | 'prerequisites'
+  | 'url'
+  | 'other';
 
 export interface CareerOpportunity {
   title: string;

@@ -4,7 +4,7 @@ import { getDictionary } from '../../dictionaries';
 import { isLocale } from '@/lib/i18n';
 import { getUser } from '@/lib/supabase/server';
 import { getPlans } from '@/lib/data/queries';
-import { getCertificationById, getTrendingCertifications } from '@/lib/data/certifications';
+import { getAllCertifications, getTrendingCertifications } from '@/lib/data/certifications';
 import { CertCard } from '@/components/app/cert-card';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -26,14 +26,24 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
   const { lang } = await params;
   if (!isLocale(lang)) notFound();
 
-  const [dict, user, plans] = await Promise.all([getDictionary(lang), getUser(), getPlans()]);
+  const [dict, user, plans, trendingAll, catalog] = await Promise.all([
+    getDictionary(lang),
+    getUser(),
+    getPlans(),
+    getTrendingCertifications(),
+    // One query, then look plans up in memory. Calling getCertificationById per
+    // plan inside the map below was free against an array and is a query per
+    // plan against the database.
+    getAllCertifications(),
+  ]);
   const t = dict.home;
 
   const firstName =
     (user?.user_metadata?.full_name as string | undefined)?.split(' ')[0] ??
     user?.email?.split('@')[0];
 
-  const trending = getTrendingCertifications().slice(0, 6);
+  const trending = trendingAll.slice(0, 6);
+  const byId = new Map(catalog.map((c) => [c.id, c]));
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
@@ -58,7 +68,7 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
         ) : (
           <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {plans.map((plan) => {
-              const cert = getCertificationById(plan.certification_id);
+              const cert = byId.get(plan.certification_id);
               return (
                 <li key={plan.id} className="flex">
                   <Card as="article" interactive className="flex w-full flex-col p-5">

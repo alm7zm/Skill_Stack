@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { getDictionary } from '../../dictionaries';
 import { isLocale } from '@/lib/i18n';
-import { certifications, searchCertifications } from '@/lib/data/certifications';
+import { searchCertifications } from '@/lib/data/certifications';
 import { DIFFICULTY_ORDER, plural } from '@/lib/utils';
 import { CertCard } from '@/components/app/cert-card';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -39,10 +39,10 @@ export default async function SearchPage({
   const dict = await getDictionary(lang);
   const t = dict.search;
 
-  // Reuse the catalog's own search helper rather than re-implementing matching.
-  let results = q.trim() ? searchCertifications(q) : certifications;
-  if (category) results = results.filter((c) => c.category === category);
-  if (difficulty) results = results.filter((c) => c.difficulty === difficulty);
+  // Postgres filters and returns only the matching rows. This used to pull the
+  // whole catalog into memory and filter it in JS, which was fine at 28 rows and
+  // is the thing that stops being fine as the catalog grows.
+  const results = await searchCertifications({ q, category, difficulty });
 
   const hasFilters = Boolean(q || category || difficulty);
 

@@ -1,6 +1,6 @@
 import { generateObject } from 'ai';
 import { createClient, getUser } from '@/lib/supabase/server';
-import { getCertificationById } from '@/lib/data/certifications';
+import { getAllCertifications, getCertificationById } from '@/lib/data/certifications';
 import {
   advisorModel,
   chatRequestSchema,
@@ -39,7 +39,10 @@ export async function POST(req: Request) {
   }
 
   const { certId, locale, messages } = parsed.data;
-  const cert = getCertificationById(certId);
+  const [cert, catalog] = await Promise.all([
+    getCertificationById(certId),
+    getAllCertifications(),
+  ]);
   if (!cert) {
     return Response.json({ error: 'unknown certification' }, { status: 404 });
   }
@@ -47,7 +50,7 @@ export async function POST(req: Request) {
   const { object: plan } = await generateObject({
     model: advisorModel,
     schema: planSchema,
-    system: systemPrompt(cert, locale),
+    system: systemPrompt(cert, locale, catalog),
     prompt: `${planPrompt(cert, locale)}\n\nConversation so far:\n${messages
       .map((m) => `${m.role}: ${m.content}`)
       .join('\n')}`,

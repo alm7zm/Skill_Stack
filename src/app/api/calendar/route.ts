@@ -79,7 +79,7 @@ export async function POST(req: Request) {
     (topicRows ?? []).map((r) => [r.topic_id, r.calendar_event_id as string | null])
   );
 
-  const cert = getCertificationById(plan.certification_id);
+  const cert = await getCertificationById(plan.certification_id);
   const weeks = (plan.plan as { weeks?: { topics: { id: string; title: string; description: string; estimatedHours: number }[] }[] } | null)?.weeks ?? [];
   const topics = weeks.flatMap((w) => w.topics);
 
