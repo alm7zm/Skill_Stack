@@ -36,6 +36,7 @@ export default async function AuthPage({
         emailLabel: dict.auth.emailLabel,
         emailPlaceholder: dict.auth.emailPlaceholder,
         passwordLabel: dict.auth.passwordLabel,
+        confirmLabel: dict.auth.confirmLabel,
         signIn: dict.auth.signIn,
         signUp: dict.auth.signUp,
         noAccount: dict.auth.noAccount,

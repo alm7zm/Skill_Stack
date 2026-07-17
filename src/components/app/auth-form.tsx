@@ -27,6 +27,7 @@ type Labels = {
   emailLabel: string;
   emailPlaceholder: string;
   passwordLabel: string;
+  confirmLabel: string;
   signIn: string;
   signUp: string;
   terms: { agree: string; termsLink: string; privacyLink: string };
@@ -59,6 +60,8 @@ type Labels = {
     exists: string;
     nameRequired: string;
     termsRequired: string;
+    confirmRequired: string;
+    confirmMismatch: string;
   };
 };
 
@@ -90,17 +93,22 @@ export function AuthForm({
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
   const [agreed, setAgreed] = useState(false);
   const [errors, setErrors] = useState<{
     name?: string;
     email?: string;
     password?: string;
+    confirm?: string;
     terms?: string;
     form?: string;
   }>(initialError ? { form: labels.errors.generic } : {});
-  const [touched, setTouched] = useState<{ name?: boolean; email?: boolean; password?: boolean }>(
-    {}
-  );
+  const [touched, setTouched] = useState<{
+    name?: boolean;
+    email?: boolean;
+    password?: boolean;
+    confirm?: boolean;
+  }>({});
   const [notice, setNotice] = useState<string>();
   const [busy, setBusy] = useState(false);
   // Set when the account exists and the password was right, but the address was
@@ -128,17 +136,26 @@ export function AuthForm({
     return undefined;
   }
 
+  /** Compared against the password you cannot see — a typo here is the whole point. */
+  function confirmError(value: string, against = password) {
+    if (mode !== 'signup') return undefined;
+    if (!value) return labels.errors.confirmRequired;
+    if (value !== against) return labels.errors.confirmMismatch;
+    return undefined;
+  }
+
   function validate() {
     const found: typeof errors = { email: emailError(email) };
     if (mode !== 'reset') found.password = passwordError(password);
     if (mode === 'signup') {
       found.name = nameError(name);
+      found.confirm = confirmError(confirm);
       if (!agreed) found.terms = labels.errors.termsRequired;
     }
 
     setErrors(found);
-    setTouched({ name: true, email: true, password: true });
-    return !found.email && !found.password && !found.name && !found.terms;
+    setTouched({ name: true, email: true, password: true, confirm: true });
+    return !found.email && !found.password && !found.name && !found.confirm && !found.terms;
   }
 
   function switchMode(nextMode: Mode) {
@@ -395,6 +412,11 @@ export function AuthForm({
                 setPassword(e.target.value);
                 if (touched.password)
                   setErrors((p) => ({ ...p, password: passwordError(e.target.value) }));
+                // Editing the password after confirming it can un-match the pair,
+                // so re-check the confirm field against the new value rather than
+                // leaving a stale "they match" behind.
+                if (touched.confirm)
+                  setErrors((p) => ({ ...p, confirm: confirmError(confirm, e.target.value) }));
               }}
               onBlur={() => {
                 setTouched((p) => ({ ...p, password: true }));
@@ -428,6 +450,31 @@ export function AuthForm({
               </div>
             )}
           </div>
+        )}
+
+        {/* Catches a typo in a field you cannot read back. The reveal toggle helps
+            but is opt-in — and a mistyped password is only discovered later, at
+            sign-in, by which point it is a support problem rather than a form one. */}
+        {mode === 'signup' && (
+          <Field
+            label={labels.confirmLabel}
+            type="password"
+            name="confirmPassword"
+            autoComplete="new-password"
+            icon={<LockIcon />}
+            reveal={{ show: labels.password.show, hide: labels.password.hide }}
+            value={confirm}
+            onChange={(e) => {
+              setConfirm(e.target.value);
+              if (touched.confirm)
+                setErrors((p) => ({ ...p, confirm: confirmError(e.target.value) }));
+            }}
+            onBlur={() => {
+              setTouched((p) => ({ ...p, confirm: true }));
+              setErrors((p) => ({ ...p, confirm: confirmError(confirm) }));
+            }}
+            error={errors.confirm}
+          />
         )}
 
         {mode === 'signup' && (

@@ -1,7 +1,12 @@
 import { streamText } from 'ai';
 import { getUser } from '@/lib/supabase/server';
 import { getAllCertifications, getCertificationById } from '@/lib/data/certifications';
-import { advisorModel, chatRequestSchema, systemPrompt } from '@/lib/ai/advisor';
+import {
+  advisorModel,
+  chatRequestSchema,
+  providerErrorResponse,
+  systemPrompt,
+} from '@/lib/ai/advisor';
 
 /**
  * A real streaming completion, replacing the scripted advisor that faked typing
@@ -40,18 +45,56 @@ export async function POST(req: Request) {
     getAllCertifications(),
   ]);
 
+  // streamText does not throw and reading its stream does not reject: when the
+  // provider fails, onError fires and the stream simply ends empty. Measured,
+  // not assumed — a 429 gives `onError: RetryError` and then `read() -> {done:
+  // true}`. So the failure has to be captured here or it is lost, and the client
+  // cannot tell "out of quota" from "the model had nothing to say".
+  let failure: unknown;
   const result = streamText({
     model: advisorModel,
     system: systemPrompt(cert, locale, catalog),
     messages,
-    // The response has already been sent with a 200 by the time the provider can
-    // fail, so a mid-stream error cannot become an HTTP status. Without this it
-    // is swallowed entirely and the user just gets an empty reply. The client
-    // treats an empty stream as a failure — see components/app/advisor-chat.tsx.
     onError({ error }) {
+      failure = error;
       console.error('advisor stream failed:', error);
     },
   });
 
-  return result.toTextStreamResponse();
+  // Pull the first chunk before answering. The provider fails before emitting a
+  // token in the case that matters (quota), so waiting for it turns a silent
+  // empty 200 into a real status the client can explain.
+  const reader = result.textStream.getReader();
+  const first = await reader.read();
+
+  if (first.done) {
+    reader.releaseLock();
+    if (failure) return providerErrorResponse(failure);
+    // Genuinely nothing to say, and no error: still a failure from here.
+    return Response.json({ error: 'provider' }, { status: 502 });
+  }
+
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      controller.enqueue(encoder.encode(first.value));
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        controller.enqueue(encoder.encode(value));
+      }
+      // A failure after the first token cannot become a status — the 200 is
+      // already sent. The client keeps the partial answer; onError logged why.
+      controller.close();
+    },
+    cancel() {
+      // The user navigated away or hit stop; stop generating rather than
+      // finishing a reply nobody will read.
+      void reader.cancel();
+    },
+  });
+
+  return new Response(stream, {
+    headers: { 'content-type': 'text/plain; charset=utf-8' },
+  });
 }

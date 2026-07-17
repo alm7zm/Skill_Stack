@@ -132,6 +132,7 @@
     "emailLabel": "Email",
     "emailPlaceholder": "you@example.com",
     "passwordLabel": "Password",
+    "confirmLabel": "Confirm password",
     "signIn": "Sign in",
     "signUp": "Create account",
     "noAccount": "No account yet?",
@@ -183,6 +184,8 @@
       "emailInvalid": "That doesn't look like an email address.",
       "passwordRequired": "Enter your password.",
       "passwordShort": "Passwords need at least 8 characters.",
+      "confirmRequired": "Type your password again.",
+      "confirmMismatch": "These passwords don't match.",
       "notConfirmed": "This account hasn't been confirmed yet. Use the link we emailed you, or send a new one.",
       "rateLimit": "We've sent too many emails recently. Please try again later.",
       "exists": "An account with that email already exists. Sign in instead.",
@@ -294,9 +297,19 @@
       "evaluation": "Fit",
       "planning": "Plan"
     },
-    "viewPlan": "View your plan",
+    "viewPlan": "Build my plan",
     "restart": "Start over",
-    "error": "The advisor stopped responding. Your answers are safe — try again."
+    "error": "The advisor stopped responding. Your answers are safe — try again.",
+    "status": {
+      "thinking": "Reading your answer",
+      "drafting": "Drafting your plan — this takes a few seconds",
+      "saving": "Saving it to your account",
+      "done": "Done. Opening your plan"
+    },
+    "quota": {
+      "message": "The advisor has hit its daily limit with Google.",
+      "retry": "Try again in {seconds}s."
+    }
   },
   "plan": {
     "title": "Study plan",

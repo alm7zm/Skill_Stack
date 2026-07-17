@@ -6,6 +6,7 @@ import {
   chatRequestSchema,
   planPrompt,
   planSchema,
+  providerErrorResponse,
   systemPrompt,
 } from '@/lib/ai/advisor';
 
@@ -47,14 +48,23 @@ export async function POST(req: Request) {
     return Response.json({ error: 'unknown certification' }, { status: 404 });
   }
 
-  const { object: plan } = await generateObject({
-    model: advisorModel,
-    schema: planSchema,
-    system: systemPrompt(cert, locale, catalog),
-    prompt: `${planPrompt(cert, locale)}\n\nConversation so far:\n${messages
-      .map((m) => `${m.role}: ${m.content}`)
-      .join('\n')}`,
-  });
+  // Unlike streamText, generateObject rejects — so the failure arrives here and
+  // gets the same treatment, otherwise a quota rejection would surface as an
+  // unhandled 500 and the client would show "something broke".
+  let plan;
+  try {
+    ({ object: plan } = await generateObject({
+      model: advisorModel,
+      schema: planSchema,
+      system: systemPrompt(cert, locale, catalog),
+      prompt: `${planPrompt(cert, locale)}\n\nConversation so far:\n${messages
+        .map((m) => `${m.role}: ${m.content}`)
+        .join('\n')}`,
+    }));
+  } catch (err) {
+    console.error('plan generation failed:', err);
+    return providerErrorResponse(err);
+  }
 
   const supabase = await createClient();
 

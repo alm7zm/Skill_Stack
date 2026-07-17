@@ -45,6 +45,8 @@ export default async function AdvisorPage({
             restart: t.restart,
             error: t.error,
             opening: t.opening,
+            status: t.status,
+            quota: t.quota,
           }}
         />
       </div>

@@ -1,4 +1,5 @@
 import { google } from '@ai-sdk/google';
+import { APICallError, RetryError } from 'ai';
 import { z } from 'zod';
 import type { Certification } from '@/lib/types';
 import type { Locale } from '@/lib/i18n';
@@ -134,18 +135,70 @@ export type ChatRequest = z.infer<typeof chatRequestSchema>;
  * an AI Studio key, which is NOT the GOOGLE_CLIENT_ID/SECRET pair used for
  * Calendar OAuth.
  *
- * Pinned deliberately. `gemini-flash-latest` also works and never 404s, but it
- * re-points underneath you: the advisor's tone and the plan JSON it produces
- * would change without a deploy, and this prompt is tuned to be blunt rather
- * than flattering. A pin fails loudly at a known time; an alias drifts quietly.
+ * Pinned to an exact model, not an alias like `gemini-flash-latest`: an alias
+ * re-points underneath you, so the advisor's tone and the plan JSON would change
+ * without a deploy, and this prompt is tuned to be blunt rather than flattering.
+ * A pin fails loudly at a known time; an alias drifts quietly.
  *
- * When this is retired Google returns 404 "no longer available to new users"
- * (which is what killed gemini-2.5-flash here). To find a live replacement:
+ * Overridable by env because this value demonstrably does not hold still — in a
+ * single session gemini-2.5-flash started 404ing ("no longer available to new
+ * users") and gemini-2.0-flash had its free tier cut to limit: 0. When the next
+ * one goes, that should be an env change, not a deploy.
+ *
+ * Default is flash-lite for the free tier's sake: gemini-3.5-flash allows 20
+ * requests per DAY there (measured from its own 429), and one advisor
+ * conversation costs five or six. Both were checked against the real prompt and
+ * both refuse a beginner and stay inside the catalog; 3.5-flash reasons a little
+ * more richly, so set GEMINI_MODEL=gemini-3.5-flash if you are paying for quota.
+ *
+ * To find a live replacement:
  *   GET https://generativelanguage.googleapis.com/v1beta/models?key=$KEY
- * — but note that listing is not proof: 2.5-flash still appears in it while
- * refusing every call. Probe the candidate with :generateContent before trusting it.
+ * — but listing is not proof: 2.5-flash still appears there while refusing every
+ * call. Probe a candidate with :generateContent before trusting it.
  *
  * Swapping providers is one line: `openai('gpt-5-mini')` with @ai-sdk/openai
  * installed. Everything downstream is provider-agnostic AI SDK code.
  */
-export const advisorModel = google('gemini-3.5-flash');
+export const advisorModel = google(process.env.GEMINI_MODEL ?? 'gemini-3.1-flash-lite');
+
+/* ---------------------------------------------------------------------------
+ * Provider failures
+ * ------------------------------------------------------------------------ */
+
+/** Free-tier quota, mid-stream provider failure, or something unclassified. */
+export type AdvisorFailure = { error: 'quota'; retryAfter?: number } | { error: 'provider' };
+
+/**
+ * Turns whatever the AI SDK threw into something the client can act on.
+ *
+ * The SDK wraps the real failure: after exhausting its retries it reports a
+ * RetryError, and the useful object — status code, response body — is its
+ * lastError. Reading `.message` instead would give prose that changes.
+ */
+export function describeProviderFailure(err: unknown): AdvisorFailure {
+  const api = RetryError.isInstance(err) ? err.lastError : err;
+  if (!APICallError.isInstance(api)) return { error: 'provider' };
+
+  if (api.statusCode === 429) {
+    // Google returns how long to wait, in a RetryInfo detail. It is the
+    // difference between "try again in a minute" and "try again, who knows".
+    const match = /"retryDelay":\s*"(\d+(?:\.\d+)?)s"/.exec(String(api.responseBody ?? ''));
+    const retryAfter = match ? Math.ceil(Number(match[1])) : undefined;
+    return { error: 'quota', retryAfter };
+  }
+
+  return { error: 'provider' };
+}
+
+/** Same failure as an HTTP response, so both routes answer identically. */
+export function providerErrorResponse(err: unknown): Response {
+  const failure = describeProviderFailure(err);
+  if (failure.error === 'quota') {
+    return Response.json(failure, {
+      status: 429,
+      // Standard header as well as the body: proxies and fetch wrappers know it.
+      headers: failure.retryAfter ? { 'retry-after': String(failure.retryAfter) } : {},
+    });
+  }
+  return Response.json(failure, { status: 502 });
+}
