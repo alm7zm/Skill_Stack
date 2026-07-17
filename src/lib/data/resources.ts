@@ -60,3 +60,10 @@ export const learningResources: LearningResource[] = [
 export function getResourcesForCertification(certId: string): LearningResource[] {
   return learningResources.filter(r => r.certificationId === certId);
 }
+
+/** Resolve ids the advisor attached to a week. Unknown ids are dropped, not
+ *  guessed at — see the resourceIds note in lib/ai/advisor.ts. */
+export function getResourcesByIds(ids: readonly string[]): LearningResource[] {
+  const byId = new Map(learningResources.map((r) => [r.id, r]));
+  return ids.map((id) => byId.get(id)).filter((r): r is LearningResource => r !== undefined);
+}

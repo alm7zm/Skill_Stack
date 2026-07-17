@@ -1,7 +1,7 @@
 import { google } from '@ai-sdk/google';
 import { APICallError, RetryError } from 'ai';
 import { z } from 'zod';
-import type { Certification } from '@/lib/types';
+import type { Certification, LearningResource } from '@/lib/types';
 import type { Locale } from '@/lib/i18n';
 
 /**
@@ -26,6 +26,19 @@ export const planSchema = z.object({
         estimatedHours: z.number().min(0),
         hasPracticeExam: z.boolean(),
         isReviewWeek: z.boolean(),
+        /**
+         * Ids picked from the candidate list in the prompt — never URLs.
+         *
+         * The model does the judgment (which resource suits week 3), the code
+         * owns the facts (what that resource is and where it lives). Asking for
+         * links directly would get invented ones: a plausible Udemy URL that
+         * 404s, or worse, one that resolves to something else entirely. Ids are
+         * checkable against the catalog, so a wrong one can be dropped; a wrong
+         * URL is indistinguishable from a right one until someone clicks it.
+         */
+        resourceIds: z
+          .array(z.string())
+          .describe('Ids from the resource list, best first. Empty if none fit.'),
         topics: z.array(
           z.object({
             id: z.string().describe('Stable slug, e.g. "week1-iam-basics". Must be unique.'),
@@ -47,13 +60,61 @@ const LANGUAGE: Record<Locale, string> = {
 };
 
 /**
+ * What the profile already answers, so the advisor stops asking for it.
+ *
+ * Only fields the user filled in. An empty profile produces an empty list and
+ * the advisor asks for everything, as before.
+ */
+export type KnownFacts = { label: string; value: string }[];
+
+/**
+ * Turns a profile row into the advisor's list of things it must not ask about.
+ *
+ * Labels are English regardless of locale: this is a system prompt, not user
+ * copy. The model is told to reply in the user's language and does — feeding it
+ * translated field names would only make the mapping fuzzier.
+ */
+export function knownFacts(profile: {
+  career_goal?: string | null;
+  job_role?: string | null;
+  experience_level?: string | null;
+  budget?: number | null;
+  daily_study_time?: number | null;
+  weekly_availability?: number | null;
+} | null): KnownFacts {
+  if (!profile) return [];
+
+  const facts: KnownFacts = [];
+  const push = (label: string, value: string | number | null | undefined) => {
+    // 0 is a real answer for budget and must survive: "I have no money for this"
+    // is exactly the condition worth knowing. Only null/''/undefined are absent.
+    if (value === null || value === undefined || value === '') return;
+    facts.push({ label, value: String(value) });
+  };
+
+  push('Their career goal', profile.career_goal);
+  push('Their current role', profile.job_role);
+  push('Their self-reported experience level', profile.experience_level);
+  push('Hours they can study per day', profile.daily_study_time);
+  push('Days per week they are available', profile.weekly_availability);
+  if (profile.budget !== null && profile.budget !== undefined) {
+    push(
+      'Their budget for learning materials',
+      profile.budget === 0 ? '0 — they can only use free resources' : `${profile.budget} USD`
+    );
+  }
+  return facts;
+}
+
+/**
  * `catalog` is passed in rather than imported: the catalog is a database read
  * now, and this module stays synchronous and testable by not doing I/O.
  */
 export function systemPrompt(
   cert: Certification | undefined,
   locale: Locale,
-  catalog: Certification[]
+  catalog: Certification[],
+  known: KnownFacts = []
 ): string {
   return [
     'You are the SkillStack certification advisor.',
@@ -68,6 +129,20 @@ export function systemPrompt(
     '- Never invent exam costs, durations or pass rates. Use only the facts given below.',
     '- No emoji. No exclamation marks. Plain, specific language.',
     '',
+    // The profile already holds most of what the advisor used to ask for, and
+    // asking a person to retype what they typed into their profile is how an
+    // app tells them it wasn't listening.
+    known.length > 0
+      ? [
+          'This person already told SkillStack the following in their profile. Treat every line as already answered:',
+          known.map((f) => `- ${f.label}: ${f.value}`).join('\n'),
+          '',
+          'Do not ask about anything on that list. Take it as given and reason from it.',
+          'You may ask them to confirm a specific item only if their answers contradict it.',
+          'Ask only for what is genuinely missing — typically why they want this particular certification, and their target date.',
+          '',
+        ].join('\n')
+      : '',
     // Without this the model recommends from world knowledge and sends people to
     // certifications this app does not carry — it suggested AWS Cloud
     // Practitioner, which is a correct real-world answer and a dead end here.
@@ -90,7 +165,29 @@ export function systemPrompt(
   ].join('\n');
 }
 
-export function planPrompt(cert: Certification | undefined, locale: Locale): string {
+/**
+ * The resources the model is allowed to attach to a week.
+ *
+ * Budget is enforced here rather than asked for in the prompt: a rule in prose
+ * is a request, and a model that ignores it sends someone with no money to a
+ * $90 course. A model cannot pick what it was never shown.
+ *
+ * Anything other than an explicit 0 gets the full list — an unset budget means
+ * "we don't know", not "free only", and paid resources stay labelled in the UI
+ * so the choice is still the user's.
+ */
+export function resourcesForBudget(
+  resources: LearningResource[],
+  budget: number | null | undefined
+): LearningResource[] {
+  return budget === 0 ? resources.filter((r) => r.free) : resources;
+}
+
+export function planPrompt(
+  cert: Certification | undefined,
+  locale: Locale,
+  resources: LearningResource[] = []
+): string {
   return [
     `Produce a study plan in ${LANGUAGE[locale]} based on the conversation.`,
     'Pace it to the hours per day the user actually stated, not to an ideal schedule.',
@@ -98,6 +195,30 @@ export function planPrompt(cert: Certification | undefined, locale: Locale): str
     'Include at least one review week and at least one practice exam before the target date.',
     'Set recommended=false if the conversation showed this is a poor fit.',
     cert ? `Certification: ${cert.name} — typical study time ${cert.estimatedStudyHours} hours.` : '',
+    '',
+    resources.length > 0
+      ? [
+          'Attach resources to each week by putting their ids in that week\'s resourceIds.',
+          'Rules for resourceIds:',
+          '- Use only ids from the list below. Never write a URL, a title, or an id that is not listed.',
+          '- One to three per week, ordered best first. Prefer the ones that match what that week covers.',
+          '- Match the type to the week: documentation and courses while learning, practice-exam ids only in a practice or review week.',
+          '- Reusing an id across weeks is fine when the resource genuinely spans them.',
+          '- If nothing on the list fits a week, leave resourceIds empty rather than forcing one in.',
+          '',
+          'Available resources:',
+          resources
+            .map(
+              (r) =>
+                `- ${r.id} | ${r.title} | ${r.provider} | ${r.type} | ${
+                  r.free ? 'free' : 'paid'
+                } | ${r.duration}`
+            )
+            .join('\n'),
+        ].join('\n')
+      : // Only 12 of the 28 certifications have a curated resource list. Saying
+        // so beats leaving the model to guess why the list is empty and fill it.
+        'There are no curated resources for this certification. Leave every resourceIds empty.',
   ]
     .filter(Boolean)
     .join('\n');

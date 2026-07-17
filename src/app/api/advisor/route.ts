@@ -1,9 +1,11 @@
 import { streamText } from 'ai';
 import { getUser } from '@/lib/supabase/server';
 import { getAllCertifications, getCertificationById } from '@/lib/data/certifications';
+import { getProfile } from '@/lib/data/queries';
 import {
   advisorModel,
   chatRequestSchema,
+  knownFacts,
   providerErrorResponse,
   systemPrompt,
 } from '@/lib/ai/advisor';
@@ -40,9 +42,14 @@ export async function POST(req: Request) {
   }
 
   const { certId, locale, messages } = parsed.data;
-  const [cert, catalog] = await Promise.all([
+  // The profile is read here, not sent by the client: it decides what the
+  // advisor stops asking about, so a browser must not be able to claim
+  // "experience_level: expert" and skip the question. RLS scopes it to the
+  // caller anyway.
+  const [cert, catalog, { profile }] = await Promise.all([
     getCertificationById(certId),
     getAllCertifications(),
+    getProfile(),
   ]);
 
   // streamText does not throw and reading its stream does not reject: when the
@@ -53,7 +60,7 @@ export async function POST(req: Request) {
   let failure: unknown;
   const result = streamText({
     model: advisorModel,
-    system: systemPrompt(cert, locale, catalog),
+    system: systemPrompt(cert, locale, catalog, knownFacts(profile)),
     messages,
     onError({ error }) {
       failure = error;

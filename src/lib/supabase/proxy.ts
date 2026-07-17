@@ -4,9 +4,14 @@ import { NextResponse, type NextRequest } from 'next/server'
 /**
  * Refreshes the Supabase auth cookies and reports who (if anyone) is signed in.
  *
- * The returned `response` carries the refreshed cookies and MUST be the one sent
- * back, or sessions silently stop refreshing. A caller building its own redirect
- * has to carry those cookies over — see `copyAuthCookies`.
+ * `response()` is a getter, not the response itself: the cookie adapter below
+ * *replaces* the response object whenever it writes cookies, so a caller holding
+ * a reference taken at return time would send a stale one — and any cookie
+ * written after that (by a sign-out, say) would be silently dropped.
+ *
+ * Whatever `response()` gives back MUST be the one sent, or sessions stop
+ * refreshing. A caller building its own redirect has to carry the cookies over —
+ * see `copyAuthCookies`.
  */
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request })
@@ -38,7 +43,11 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  return { response, user }
+  // `supabase` comes back so the caller can sign out through it — that routes
+  // the cleared cookies through the same setAll above, rebuilding `response`.
+  // Deleting the cookies by hand would miss the chunked `.0`/`.1` variants the
+  // adapter writes when a token is too big for one cookie.
+  return { response: () => response, supabase, user }
 }
 
 /** Carry refreshed auth cookies onto a redirect built by the caller. */

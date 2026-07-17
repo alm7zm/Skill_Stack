@@ -8,12 +8,12 @@ export default async function AuthPage({
   searchParams,
 }: {
   params: Promise<{ lang: string }>;
-  searchParams: Promise<{ next?: string; error?: string }>;
+  searchParams: Promise<{ next?: string; error?: string; reason?: string }>;
 }) {
   const { lang } = await params;
   if (!isLocale(lang)) notFound();
 
-  const { next, error } = await searchParams;
+  const { next, error, reason } = await searchParams;
   const dict = await getDictionary(lang);
 
   // The heading is rendered by AuthForm: it changes with the mode, and the mode
@@ -23,6 +23,10 @@ export default async function AuthPage({
       lang={lang}
       next={next}
       initialError={error}
+      // Being logged out on purpose is not a failure, so it does not get the red
+      // treatment — it gets an explanation, or it reads as the app losing your
+      // session at random.
+      initialNotice={reason === 'idle' ? dict.auth.idleSignOut : undefined}
       labels={{
         title: dict.auth.title,
         subtitle: dict.auth.subtitle,

@@ -21,7 +21,10 @@ export function SignOutButton({
       variant="secondary"
       className={className}
       onClick={async () => {
-        await createClient().auth.signOut();
+        // scope: 'local'. The default is 'global', which revokes every refresh
+        // token on the account — so signing out here also signed you out on
+        // your phone. This button says "sign out", not "sign out everywhere".
+        await createClient().auth.signOut({ scope: 'local' });
         router.push(`/${lang}`);
         router.refresh(); // drop the server-rendered signed-in shell
       }}

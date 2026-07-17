@@ -4,6 +4,7 @@ import { isLocale } from '@/lib/i18n';
 import { getUser } from '@/lib/supabase/server';
 import { AppNav } from '@/components/app/app-nav';
 import { Avatar } from '@/components/app/avatar';
+import { IdleTimeout } from '@/components/app/idle-timeout';
 
 /**
  * Server component. Only AppNav is a client island (it needs the active path).
@@ -43,10 +44,17 @@ export default async function AppLayout({
           openMenu: dict.a11y.openMenu,
           closeMenu: dict.a11y.closeMenu,
           signIn: dict.nav.signIn,
+          signOut: dict.nav.signOut,
+          signingOut: dict.nav.signingOut,
+          account: dict.a11y.accountMenu,
         }}
         user={user ? { name, email: user.email ?? '' } : null}
         avatar={<Avatar name={name} email={user?.email} src={avatarUrl} size={32} />}
       />
+
+      {/* Only for a real session. /search and /certification render this layout
+          for signed-out visitors too, and there is nothing to time out. */}
+      {user && <IdleTimeout lang={lang} />}
 
       <main id="main" className="flex-1">
         {children}

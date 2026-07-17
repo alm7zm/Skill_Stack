@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { copyAuthCookies, updateSession } from '@/lib/supabase/proxy'
+import { IDLE_COOKIE, IDLE_MS, isIdle } from '@/lib/idle'
 import {
   LOCALE_COOKIE,
   isLocale,
@@ -59,19 +60,53 @@ export async function proxy(request: NextRequest) {
 
   const locale = segment
 
-  // 2. Refresh the session. `response` carries the new cookies.
-  const { response, user } = await updateSession(request)
+  // 2. Refresh the session. response() carries the new cookies.
+  const { response, supabase, user } = await updateSession(request)
 
-  // 3. Gate the app. Replaces the old "no auth, demo purposes" behaviour, which
+  // 3. Sign out an abandoned session before doing anything else with it.
+  //    This is the half that enforces: the client timer clears the screen, but
+  //    it can be turned off with JS, whereas nothing reaches a protected page
+  //    without passing through here first.
+  if (user && isIdle(request.cookies.get(IDLE_COOKIE)?.value)) {
+    // Local scope: signing out one idle browser must not revoke the account's
+    // other sessions. The default scope is global — see AccountMenu.
+    await supabase.auth.signOut({ scope: 'local' })
+
+    const url = request.nextUrl.clone()
+    url.pathname = `/${locale}/auth`
+    url.searchParams.set('reason', 'idle')
+    // No `next`: nudging someone back to where they were is friendly on a
+    // deliberate sign-in, but the point here is that we do not know who is at
+    // the keyboard now. Land them on a bare sign-in.
+    const redirect = copyAuthCookies(response(), NextResponse.redirect(url))
+    redirect.cookies.delete(IDLE_COOKIE)
+    return redirect
+  }
+
+  // 4. Gate the app. Replaces the old "no auth, demo purposes" behaviour, which
   //    left every (app) route publicly readable.
   if (!user && isProtected(pathWithoutLocale(pathname, locale))) {
     const url = request.nextUrl.clone()
     url.pathname = `/${locale}/auth`
     url.searchParams.set('next', pathname)
-    return copyAuthCookies(response, NextResponse.redirect(url))
+    return copyAuthCookies(response(), NextResponse.redirect(url))
   }
 
-  return response
+  const out = response()
+
+  // 5. This request IS activity, so restamp the clock. Only for signed-in
+  //    users: an anonymous visitor has no session to expire.
+  if (user) {
+    out.cookies.set(IDLE_COOKIE, String(Date.now()), {
+      path: '/',
+      maxAge: Math.floor(IDLE_MS / 1000),
+      sameSite: 'lax',
+      // Readable by JS on purpose: the client timer shares this clock.
+      httpOnly: false,
+    })
+  }
+
+  return out
 }
 
 export const config = {

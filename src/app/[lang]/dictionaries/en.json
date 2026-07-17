@@ -8,7 +8,8 @@
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
     "toggleSidebar": "Collapse sidebar",
-    "switchLanguage": "Switch language"
+    "switchLanguage": "Switch language",
+    "accountMenu": "Account menu"
   },
   "common": {
     "back": "Back",
@@ -50,7 +51,8 @@
     "signIn": "Sign in",
     "signOut": "Sign out",
     "getStarted": "Get started",
-    "searchPlaceholder": "Search certifications"
+    "searchPlaceholder": "Search certifications",
+    "signingOut": "Signing out"
   },
   "landing": {
     "hero": {
@@ -191,7 +193,8 @@
       "exists": "An account with that email already exists. Sign in instead.",
       "nameRequired": "Enter your name.",
       "termsRequired": "Please accept the terms to create an account."
-    }
+    },
+    "idleSignOut": "You were signed out after 30 minutes without activity. Sign in to pick up where you left off."
   },
   "home": {
     "greeting": "Welcome back",
@@ -309,6 +312,13 @@
     "quota": {
       "message": "The advisor has hit its daily limit with Google.",
       "retry": "Try again in {seconds}s."
+    },
+    "openingKnown": "I have your profile, so I won't ask about that again. Why this certification in particular?",
+    "known": {
+      "title": "What I already know",
+      "body": "Taken from your profile — I won't ask about these again.",
+      "edit": "Change it",
+      "freeOnly": "Free resources only"
     }
   },
   "plan": {
@@ -323,7 +333,9 @@
     "syncing": "Syncing",
     "synced": "In your calendar",
     "resync": "Update calendar",
-    "notFound": "That plan doesn't exist, or it isn't yours."
+    "notFound": "That plan doesn't exist, or it isn't yours.",
+    "resources": "Resources",
+    "paid": "Paid"
   },
   "profile": {
     "title": "Profile",

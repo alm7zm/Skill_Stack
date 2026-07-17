@@ -1,12 +1,16 @@
 import { generateObject } from 'ai';
 import { createClient, getUser } from '@/lib/supabase/server';
 import { getAllCertifications, getCertificationById } from '@/lib/data/certifications';
+import { getResourcesForCertification } from '@/lib/data/resources';
+import { getProfile } from '@/lib/data/queries';
 import {
   advisorModel,
   chatRequestSchema,
+  knownFacts,
   planPrompt,
   planSchema,
   providerErrorResponse,
+  resourcesForBudget,
   systemPrompt,
 } from '@/lib/ai/advisor';
 
@@ -40,13 +44,18 @@ export async function POST(req: Request) {
   }
 
   const { certId, locale, messages } = parsed.data;
-  const [cert, catalog] = await Promise.all([
+  const [cert, catalog, { profile }] = await Promise.all([
     getCertificationById(certId),
     getAllCertifications(),
+    getProfile(),
   ]);
   if (!cert) {
     return Response.json({ error: 'unknown certification' }, { status: 404 });
   }
+
+  // Budget filtering happens before the model sees the list, so "free only" is
+  // a fact about what exists rather than an instruction it might skip.
+  const offered = resourcesForBudget(getResourcesForCertification(cert.id), profile?.budget);
 
   // Unlike streamText, generateObject rejects — so the failure arrives here and
   // gets the same treatment, otherwise a quota rejection would surface as an
@@ -56,8 +65,8 @@ export async function POST(req: Request) {
     ({ object: plan } = await generateObject({
       model: advisorModel,
       schema: planSchema,
-      system: systemPrompt(cert, locale, catalog),
-      prompt: `${planPrompt(cert, locale)}\n\nConversation so far:\n${messages
+      system: systemPrompt(cert, locale, catalog, knownFacts(profile)),
+      prompt: `${planPrompt(cert, locale, offered)}\n\nConversation so far:\n${messages
         .map((m) => `${m.role}: ${m.content}`)
         .join('\n')}`,
     }));
@@ -65,6 +74,15 @@ export async function POST(req: Request) {
     console.error('plan generation failed:', err);
     return providerErrorResponse(err);
   }
+
+  // The model is told to use only ids from the list and is not trusted to. An id
+  // it invented would render as a dead link or crash the lookup; dropping it
+  // costs the week a suggestion, which is the honest outcome.
+  const allowed = new Set(offered.map((r) => r.id));
+  plan.weeks = plan.weeks.map((week) => ({
+    ...week,
+    resourceIds: [...new Set(week.resourceIds ?? [])].filter((id) => allowed.has(id)),
+  }));
 
   const supabase = await createClient();
 

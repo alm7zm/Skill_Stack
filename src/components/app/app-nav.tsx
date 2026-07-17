@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Logo } from './logo';
 import { LanguageSwitcher } from './language-switcher';
+import { AccountMenu } from './account-menu';
 import { cn } from '@/lib/utils';
 import { pathWithoutLocale, type Locale } from '@/lib/i18n';
 
@@ -36,6 +37,9 @@ export function AppNav({
     openMenu: string;
     closeMenu: string;
     signIn: string;
+    signOut: string;
+    signingOut: string;
+    account: string;
   };
   user: { name: string | null; email: string } | null;
   avatar: React.ReactNode;
@@ -89,13 +93,19 @@ export function AppNav({
           <LanguageSwitcher current={lang} label={labels.switchLanguage} className="hidden sm:flex" />
 
           {user ? (
-            <Link
-              href={`/${lang}/profile`}
-              className="rounded-md transition-opacity hover:opacity-80"
-              aria-label={labels.profile}
-            >
-              {avatar}
-            </Link>
+            <AccountMenu
+              lang={lang}
+              name={user.name}
+              email={user.email}
+              avatar={avatar}
+              labels={{
+                account: labels.account,
+                profile: labels.profile,
+                settings: labels.settings,
+                signOut: labels.signOut,
+                signingOut: labels.signingOut,
+              }}
+            />
           ) : (
             <Link
               href={`/${lang}/auth`}
@@ -127,15 +137,10 @@ export function AppNav({
       {open && (
         <nav id="mobile-nav" className="border-t border-rule bg-paper-raised md:hidden" aria-label="Main">
           <ul className="mx-auto max-w-6xl px-4 py-2">
-            {[
-              ...items,
-              ...(user
-                ? [
-                    { href: '/profile', label: labels.profile },
-                    { href: '/settings', label: labels.settings },
-                  ]
-                : [{ href: '/auth', label: labels.signIn }]),
-            ].map(
+            {/* Profile and Settings are not repeated here — the account menu
+                sits in this same header at every width and owns them, and two
+                lists of the same links is two lists to keep in sync. */}
+            {[...items, ...(user ? [] : [{ href: '/auth', label: labels.signIn }])].map(
               (item) => (
                 <li key={item.href}>
                   <Link

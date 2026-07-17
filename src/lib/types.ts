@@ -105,6 +105,9 @@ export interface StudyWeek {
   estimatedHours: number;
   hasPracticeExam: boolean;
   isReviewWeek: boolean;
+  /** Ids into learningResources, chosen by the advisor and validated server-side.
+   *  Optional: plans generated before resources existed have no field here. */
+  resourceIds?: string[];
 }
 
 export interface StudyTopic {

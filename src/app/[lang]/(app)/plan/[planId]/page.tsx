@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getDictionary } from '../../../dictionaries';
 import { isLocale } from '@/lib/i18n';
 import { getPlan } from '@/lib/data/queries';
+import { getResourcesByIds } from '@/lib/data/resources';
 import { formatDate, formatNumber, interpolate, pluralUnit } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { toggleTopic } from './actions';
@@ -142,9 +143,67 @@ export default async function PlanPage({
                 );
               })}
             </ul>
+
+            <WeekResources ids={week.resourceIds ?? []} labels={{ title: t.resources, free: dict.common.free, paid: t.paid }} />
           </Card>
         ))}
       </div>
     </div>
+  );
+}
+
+/**
+ * The week's reading, resolved from ids the advisor picked.
+ *
+ * Renders nothing at all when there are none — 16 of the 28 certifications have
+ * no curated resources, and an empty "Resources" heading on every week would be
+ * a promise the catalog cannot keep.
+ */
+function WeekResources({
+  ids,
+  labels,
+}: {
+  ids: string[];
+  labels: { title: string; free: string; paid: string };
+}) {
+  const resources = getResourcesByIds(ids);
+  if (resources.length === 0) return null;
+
+  return (
+    <section className="mt-4 border-t border-rule pt-3">
+      <h3 className="text-xs font-medium uppercase tracking-wider text-ink-faint">
+        {labels.title}
+      </h3>
+      <ul className="mt-2 flex flex-col gap-1.5">
+        {resources.map((r) => (
+          <li key={r.id}>
+            <a
+              href={r.url}
+              target="_blank"
+              // noreferrer as well as noopener: these are third-party sites and
+              // there is no reason to tell them which plan someone came from.
+              rel="noopener noreferrer"
+              className="group flex items-baseline gap-2 rounded-sm py-1 text-sm"
+            >
+              <span className="text-ink-muted underline decoration-rule-strong underline-offset-2 transition-colors group-hover:text-accent group-hover:decoration-accent">
+                {r.title}
+              </span>
+              {/* Cost is a word, not a colour: "free" has to survive greyscale
+                  and it is the single most load-bearing fact here. */}
+              <span
+                className={
+                  r.free
+                    ? 'flex-none rounded-xs bg-accent-wash px-1.5 py-0.5 text-[0.6875rem] font-medium text-accent'
+                    : 'flex-none rounded-xs border border-rule px-1.5 py-0.5 text-[0.6875rem] font-medium text-ink-faint'
+                }
+              >
+                {r.free ? labels.free : labels.paid}
+              </span>
+              <span className="flex-none text-xs text-ink-faint">{r.provider}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

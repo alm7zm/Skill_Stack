@@ -12,6 +12,9 @@
 
 # testing
 /coverage
+# Playwright MCP drops snapshots, console logs and screenshots here while
+# driving the app. Debris from a test run, not source.
+/.playwright-mcp
 
 # next.js
 /.next/

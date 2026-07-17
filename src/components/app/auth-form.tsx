@@ -81,11 +81,15 @@ export function AuthForm({
   lang,
   next,
   initialError,
+  initialNotice,
   labels,
 }: {
   lang: Locale;
   next?: string;
   initialError?: string;
+  /** A neutral explanation for why you are here (e.g. an idle sign-out) —
+   *  distinct from initialError, which paints the form red for a failure. */
+  initialNotice?: string;
   labels: Labels;
 }) {
   const router = useRouter();
@@ -109,7 +113,7 @@ export function AuthForm({
     password?: boolean;
     confirm?: boolean;
   }>({});
-  const [notice, setNotice] = useState<string>();
+  const [notice, setNotice] = useState<string | undefined>(initialNotice);
   const [busy, setBusy] = useState(false);
   // Set when the account exists and the password was right, but the address was
   // never confirmed. Without this the only offer is "try again", which cannot work.
