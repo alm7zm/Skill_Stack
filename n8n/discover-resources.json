@@ -124,10 +124,16 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
             {
               "name": "content-type",
               "value": "application/json"
@@ -136,10 +142,8 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  system_instruction: { parts: [{ text: 'You classify study resources for IT certifications. You are strict: most search results are not worth a learner\\'s time. Judge only from the title, url and snippet given. Never invent a url — copy it exactly from the candidate. If nothing is genuinely good, return an empty array. An empty array is a correct and common answer.' }] },\n  contents: [{ role: 'user', parts: [{ text: 'Certification: ' + $json.name + ' (' + $json.short_name + ') by ' + $json.provider + '\\n\\nCandidates:\\n' + $json.candidates.map((c, i) => (i+1) + '. ' + c.title + '\\n   ' + c.url + '\\n   ' + c.snippet).join('\\n\\n') + '\\n\\nReturn the ones an actual learner should use.' }] }],\n  generationConfig: {\n    responseMimeType: 'application/json',\n    responseSchema: {\n      type: 'ARRAY',\n      items: {\n        type: 'OBJECT',\n        properties: {\n          url: { type: 'STRING' },\n          title: { type: 'STRING' },\n          provider: { type: 'STRING' },\n          type: { type: 'STRING', enum: ['course', 'documentation', 'video', 'practice-exam', 'book'] },\n          free: { type: 'BOOLEAN' },\n          duration: { type: 'STRING' },\n          ai_reason: { type: 'STRING' },\n          confidence: { type: 'NUMBER' }\n        },\n        required: ['url', 'title', 'provider', 'type', 'free', 'duration', 'ai_reason', 'confidence']\n      }\n    }\n  }\n}) }}",
-        "options": {},
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth"
+        "jsonBody": "={{ JSON.stringify({ model: 'claude-opus-4-8', max_tokens: 4096, system: \"You classify study resources for IT certifications. You are strict: most search results are not worth a learner's time. Judge only from the title, url and snippet given. Never invent a url \\u2014 copy it exactly from the candidate. If nothing is genuinely good, return an empty results array. An empty array is a correct and common answer.\", messages: [{ role: 'user', content: 'Certification: ' + $json.name + ' (' + $json.short_name + ') by ' + $json.provider + '\\n\\nCandidates:\\n' + $json.candidates.map((c, i) => (i+1) + '. ' + c.title + '\\n   ' + c.url + '\\n   ' + c.snippet).join('\\n\\n') + '\\n\\nReturn the ones an actual learner should use.' }], output_config: { format: { type: 'json_schema', schema: {\"type\": \"object\", \"additionalProperties\": false, \"properties\": {\"results\": {\"type\": \"array\", \"items\": {\"type\": \"object\", \"additionalProperties\": false, \"properties\": {\"url\": {\"type\": \"string\"}, \"title\": {\"type\": \"string\"}, \"provider\": {\"type\": \"string\"}, \"type\": {\"type\": \"string\", \"enum\": [\"course\", \"documentation\", \"video\", \"practice-exam\", \"book\"]}, \"free\": {\"type\": \"boolean\"}, \"duration\": {\"type\": \"string\"}, \"ai_reason\": {\"type\": \"string\"}, \"confidence\": {\"type\": \"number\"}}, \"required\": [\"url\", \"title\", \"provider\", \"type\", \"free\", \"duration\", \"ai_reason\", \"confidence\"]}}}, \"required\": [\"results\"]} } } }) }}",
+        "options": {}
       },
       "id": "8c2b7e30-0002-4a00-9000-000000000007",
       "name": "Rank and classify",
@@ -149,17 +153,17 @@
         920,
         0
       ],
-      "notes": "responseSchema forces valid JSON out of the model rather than prose to regex. free/duration are the model's guess, which is exactly why this proposes rather than writes. Key lives in a Header Auth credential (x-goog-api-key). This shares the advisor's Gemini quota — see n8n/README.md.",
+      "notes": "Claude via the Messages API. output_config.format constrains the reply to the JSON schema (GA on Opus 4.8, no beta header) so there is nothing to regex — the model returns {results: [...]} matching it exactly. free/duration are still the model's guess, which is why this proposes rather than writes. Model is claude-opus-4-8; set it to claude-haiku-4-5 in this body for a cheaper run. Key lives in a Header Auth credential (header name x-api-key). Unlike Gemini this does NOT share the advisor's quota — separate provider.",
       "credentials": {
         "httpHeaderAuth": {
           "id": "REPLACE_ME",
-          "name": "Gemini (x-goog-api-key)"
+          "name": "Anthropic (x-api-key)"
         }
       }
     },
     {
       "parameters": {
-        "jsCode": "// Unpack the model's answer and refuse to trust it.\n//\n// Two things get checked here rather than at review time, because a human\n// triaging fifty rows will not check them: the url must be one we actually\n// offered (models paraphrase urls), and confidence must clear a bar worth\n// a person's attention.\n\nconst src = $('Filter candidates').item.json;\nconst offered = new Map(src.candidates.map((c) => [c.url, c]));\n\nlet picks = [];\ntry {\n  const text = $json.candidates?.[0]?.content?.parts?.[0]?.text ?? '[]';\n  picks = JSON.parse(text);\n} catch (e) {\n  // A malformed answer is a dropped run, not a bad row in the database.\n  return [];\n}\n\nconst out = [];\nfor (const p of Array.isArray(picks) ? picks : []) {\n  // The url must be one we handed it. This is the whole defence against a\n  // confident, plausible, invented link — the same rule the advisor's\n  // resourceIds follow, for the same reason.\n  if (!offered.has(p.url)) continue;\n  if (typeof p.confidence !== 'number' || p.confidence < 0.6) continue;\n\n  out.push({\n    json: {\n      certification_id: src.certification_id,\n      message:\n        `Found a possible ${p.type} for ${src.name}: ${p.title} (${p.provider}). ` +\n        `${p.free ? 'Appears free' : 'Appears paid'}. ${p.ai_reason} — ${p.url}`,\n      confidence: Math.min(1, Math.max(0, p.confidence)),\n      // Exactly the shape of a certification_resources row, so accepting\n      // this is a copy-paste rather than a retyping exercise.\n      proposal: JSON.stringify({\n        certification_id: src.certification_id,\n        title: p.title,\n        provider: p.provider,\n        url: p.url,\n        duration: p.duration,\n        free: p.free,\n        type: p.type,\n        ai_reason: p.ai_reason,\n        evidence: offered.get(p.url)?.snippet,\n        found_at: new Date().toISOString(),\n      }),\n    },\n  });\n}\n\nreturn out;"
+        "jsCode": "// Unpack the model's answer and refuse to trust it.\n//\n// Two things get checked here rather than at review time, because a human\n// triaging fifty rows will not check them: the url must be one we actually\n// offered (models paraphrase urls), and confidence must clear a bar worth\n// a person's attention.\n\nconst src = $('Filter candidates').item.json;\nconst offered = new Map(src.candidates.map((c) => [c.url, c]));\n\nlet picks = [];\ntry {\n  // Anthropic: content is an array of blocks; the JSON sits in the first\n  // text block. output_config wraps the array as {results: [...]}.\n  const block = ($json.content ?? []).find((b) => b.type === 'text');\n  picks = JSON.parse(block?.text ?? '{\"results\":[]}').results ?? [];\n} catch (e) {\n  // A malformed answer is a dropped run, not a bad row in the database.\n  return [];\n}\n\nconst out = [];\nfor (const p of Array.isArray(picks) ? picks : []) {\n  // The url must be one we handed it. This is the whole defence against a\n  // confident, plausible, invented link — the same rule the advisor's\n  // resourceIds follow, for the same reason.\n  if (!offered.has(p.url)) continue;\n  if (typeof p.confidence !== 'number' || p.confidence < 0.6) continue;\n\n  out.push({\n    json: {\n      certification_id: src.certification_id,\n      message:\n        `Found a possible ${p.type} for ${src.name}: ${p.title} (${p.provider}). ` +\n        `${p.free ? 'Appears free' : 'Appears paid'}. ${p.ai_reason} — ${p.url}`,\n      confidence: Math.min(1, Math.max(0, p.confidence)),\n      // Exactly the shape of a certification_resources row, so accepting\n      // this is a copy-paste rather than a retyping exercise.\n      proposal: JSON.stringify({\n        certification_id: src.certification_id,\n        title: p.title,\n        provider: p.provider,\n        url: p.url,\n        duration: p.duration,\n        free: p.free,\n        type: p.type,\n        ai_reason: p.ai_reason,\n        evidence: offered.get(p.url)?.snippet,\n        found_at: new Date().toISOString(),\n      }),\n    },\n  });\n}\n\nreturn out;"
       },
       "id": "8c2b7e30-0002-4a00-9000-000000000008",
       "name": "Check the model's homework",

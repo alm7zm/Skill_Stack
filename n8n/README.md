@@ -10,7 +10,7 @@ constraints, and a proxy route would be app code whose only job is forwarding.
 | Workflow | Runs | Writes | Needs |
 |---|---|---|---|
 | `link-health.json` | Mondays 03:00 | Straight to the catalog | Supabase only |
-| `discover-resources.json` | Sundays 04:00 | Review queue only | Supabase + Tavily + Gemini |
+| `discover-resources.json` | Sundays 04:00 | Review queue only | Supabase + Tavily + Anthropic (Claude) |
 
 ## The rule these follow
 
@@ -61,15 +61,21 @@ enterprise feature, or `$env`, which needs `N8N_BLOCK_ENV_ACCESS_IN_NODE=false`.
 | Node | Header name | Header value |
 |---|---|---|
 | Search | `Authorization` | `Bearer tvly-...` from [tavily.com](https://tavily.com) |
-| Rank and classify | `x-goog-api-key` | your `GOOGLE_GENERATIVE_AI_API_KEY` |
+| Rank and classify | `x-api-key` | an Anthropic API key from [console.anthropic.com](https://console.anthropic.com) |
 
-> **The Gemini key is shared with the advisor, and that is a problem.**
-> Google's free tier is per-model, per-project, per-day — `gemini-3.5-flash`
-> measured **20 requests a day**. A discovery sweep over the certifications that
-> need help will spend a chunk of that, and the advisor will start returning 429
-> to real users for the rest of the day. Before enabling `discover-resources` on
-> a schedule, either put the project on a paid tier or give n8n its own Google
-> Cloud project and key. Running it once by hand is fine.
+The ranking step calls **Claude** (`claude-opus-4-8`) through the Messages API,
+not Gemini. `output_config.format` constrains the reply to a JSON schema — the
+model returns `{results: [...]}` matching it exactly, so there is nothing to
+regex and no prose to mis-parse.
+
+> **This is a separate, paid provider — deliberately.** It does *not* share the
+> advisor's Gemini free tier, so a discovery sweep can no longer 429 real users
+> out of the advisor for the rest of the day. It does cost money per run: the
+> model is `claude-opus-4-8`. For a weekly classification of short search
+> snippets, **`claude-haiku-4-5` is ~5× cheaper and more than capable** — change
+> the `model` field in the Rank-and-classify node's body if you'd rather run it
+> there. (Opus is the default only because downgrading for cost is your call to
+> make, not one to bake in silently.)
 
 ### 5. Run once, by hand, before scheduling
 
@@ -113,7 +119,7 @@ Every Sunday 04:00
       └── Which certs need help?      (skip any with >= 4; build the query)
           └── Search                  (Tavily)
               └── Filter candidates   (drop known URLs and content farms)
-                  └── Rank and classify        (Gemini, responseSchema)
+                  └── Rank and classify        (Claude, output_config.format)
                       └── Check the model's homework
                           └── Propose it       (certification_reports)
 ```
