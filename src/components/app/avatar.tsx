@@ -30,11 +30,29 @@ export function Avatar({
     .join('');
 
   return src ? (
+    /**
+     * unoptimized, deliberately. Two reasons, and the first is a crash:
+     *
+     * 1. next/image rejects any remote host missing from images.remotePatterns
+     *    — it throws "Invalid src prop", which the route error boundary catches,
+     *    so the whole page dies. Google hands out avatars on
+     *    lh3.googleusercontent.com, so signing in with Google broke every signed-in
+     *    page. unoptimized skips the loader entirely (see generateImgAttrs), so
+     *    there is no host to allow-list and no list to keep updating when another
+     *    provider is added.
+     * 2. There is nothing to optimize. Google already serves this at the exact
+     *    size we asked for (the =s96-c suffix) and we draw it at 32px. Optimising
+     *    it would proxy every user's avatar through our server and re-encode it,
+     *    which costs latency and money to save nothing.
+     *
+     * width/height stay, so the box is reserved and the layout does not shift.
+     */
     <Image
       src={src}
       alt={label}
       width={size}
       height={size}
+      unoptimized
       className={cn('rounded-md object-cover', className)}
     />
   ) : (

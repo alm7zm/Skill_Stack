@@ -17,9 +17,17 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Wire to a real reporter when one exists. Until then this at least surfaces
-    // the digest, which is the only handle you get on a prod server error.
-    console.error('Route error:', error.digest ?? error.message);
+    // Log the Error object, not a string built from it.
+    //
+    // This used to pass `error.digest ?? error.message`. Handing console.error a
+    // string makes the browser attach *this call site's* stack — forty frames of
+    // React internals ending at this line — and throw away the error's own stack,
+    // which is the only part that says what broke. Passing the object keeps the
+    // real stack, and digest/message are still on it.
+    //
+    // Wire to a real reporter when one exists; digest is the only handle you get
+    // on a prod server error, where message is redacted.
+    console.error('Route error:', error);
   }, [error]);
 
   return (
