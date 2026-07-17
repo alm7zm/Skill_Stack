@@ -132,6 +132,10 @@
     "or": "or",
     "checkEmail": "Check your email for a confirmation link.",
     "forgot": "Forgot your password?",
+    "resend": {
+      "action": "Send the confirmation link again",
+      "sent": "Sent. Check your inbox, and your spam folder."
+    },
     "reset": {
       "body": "Enter your email and we'll send you a link to set a new password.",
       "submit": "Send reset link",
@@ -171,7 +175,10 @@
       "emailRequired": "Enter your email address.",
       "emailInvalid": "That doesn't look like an email address.",
       "passwordRequired": "Enter your password.",
-      "passwordShort": "Passwords need at least 8 characters."
+      "passwordShort": "Passwords need at least 8 characters.",
+      "notConfirmed": "This account hasn't been confirmed yet. Use the link we emailed you, or send a new one.",
+      "rateLimit": "We've sent too many emails recently. Please try again later.",
+      "exists": "An account with that email already exists. Sign in instead."
     }
   },
   "home": {

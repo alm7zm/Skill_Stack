@@ -35,6 +35,7 @@ type Labels = {
   resetBody: string;
   resetSubmit: string;
   resetSent: string;
+  resend: { action: string; sent: string };
   password: {
     show: string;
     hide: string;
@@ -49,6 +50,9 @@ type Labels = {
     emailInvalid: string;
     passwordRequired: string;
     passwordShort: string;
+    notConfirmed: string;
+    rateLimit: string;
+    exists: string;
   };
 };
 
@@ -85,6 +89,9 @@ export function AuthForm({
   const [touched, setTouched] = useState<{ email?: boolean; password?: boolean }>({});
   const [notice, setNotice] = useState<string>();
   const [busy, setBusy] = useState(false);
+  // Set when the account exists and the password was right, but the address was
+  // never confirmed. Without this the only offer is "try again", which cannot work.
+  const [needsConfirm, setNeedsConfirm] = useState(false);
 
   function emailError(value: string) {
     if (!value.trim()) return labels.errors.emailRequired;
@@ -116,6 +123,54 @@ export function AuthForm({
     setErrors({});
     setTouched({});
     setNotice(undefined);
+    setNeedsConfirm(false);
+  }
+
+  /**
+   * Supabase distinguishes these; collapsing them into "wrong password" tells
+   * someone whose credentials are correct to keep retrying credentials that
+   * already work. email_not_confirmed in particular is a dead end without the
+   * resend offer — the account exists, the password matched, and no amount of
+   * retyping will help.
+   *
+   * Codes are from AuthApiError.code; the message string is not matched on,
+   * because that is prose and changes.
+   */
+  function describe(error: { code?: string; message: string }): string {
+    switch (error.code) {
+      case 'email_not_confirmed':
+        return labels.errors.notConfirmed;
+      case 'invalid_credentials':
+        return labels.errors.invalid;
+      case 'user_already_exists':
+      case 'email_exists':
+        return labels.errors.exists;
+      case 'weak_password':
+        return labels.errors.passwordShort;
+      case 'email_address_invalid':
+        return labels.errors.emailInvalid;
+      case 'over_email_send_rate_limit':
+      case 'over_request_rate_limit':
+        return labels.errors.rateLimit;
+      default:
+        // Log the real one — the user gets prose, we get the code.
+        console.error('auth failed:', error.code ?? '(no code)', error.message);
+        return mode === 'signin' ? labels.errors.invalid : labels.errors.generic;
+    }
+  }
+
+  async function resendConfirmation() {
+    setBusy(true);
+    const supabase = createClient();
+    const { error } = await supabase.auth.resend({ type: 'signup', email });
+    setBusy(false);
+    if (error) {
+      setErrors({ form: describe(error) });
+      return;
+    }
+    setNeedsConfirm(false);
+    setErrors({});
+    setNotice(labels.resend.sent);
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -124,6 +179,7 @@ export function AuthForm({
     if (!validate()) return;
 
     setBusy(true);
+    setNeedsConfirm(false);
     const supabase = createClient();
     const callback = (dest: string) =>
       `${location.origin}/auth/callback?next=${encodeURIComponent(dest)}`;
@@ -152,7 +208,8 @@ export function AuthForm({
     setBusy(false);
 
     if (result.error) {
-      setErrors({ form: mode === 'signin' ? labels.errors.invalid : labels.errors.generic });
+      setErrors({ form: describe(result.error) });
+      setNeedsConfirm(result.error.code === 'email_not_confirmed');
       return;
     }
 
@@ -294,9 +351,19 @@ export function AuthForm({
         )}
 
         {errors.form && (
-          <p role="alert" className="rounded-sm bg-danger-wash px-3 py-2 text-sm text-danger">
-            {errors.form}
-          </p>
+          <div role="alert" className="rounded-sm bg-danger-wash px-3 py-2 text-sm text-danger">
+            <p>{errors.form}</p>
+            {needsConfirm && (
+              <button
+                type="button"
+                onClick={resendConfirmation}
+                disabled={busy}
+                className="mt-1 underline underline-offset-2 hover:no-underline disabled:opacity-50"
+              >
+                {labels.resend.action}
+              </button>
+            )}
+          </div>
         )}
 
         {notice && (
