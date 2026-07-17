@@ -69,9 +69,10 @@ export async function POST(req: Request) {
       model: advisorModel,
       schema: planSchema,
       system: systemPrompt(cert, locale, catalog, knownFacts(profile, skills, languages)),
-      prompt: `${planPrompt(cert, locale, offered)}\n\nConversation so far:\n${messages
-        .map((m) => `${m.role}: ${m.content}`)
-        .join('\n')}`,
+      prompt: `${planPrompt(cert, locale, offered, {
+        formats: profile?.preferred_resource_formats,
+        sites: profile?.preferred_resource_sites,
+      })}\n\nConversation so far:\n${messages.map((m) => `${m.role}: ${m.content}`).join('\n')}`,
     }));
   } catch (err) {
     console.error('plan generation failed:', err);

@@ -74,11 +74,38 @@ test('an empty profile produces no known block at all', () => {
   assert.doesNotMatch(prompt, /Do not ask about anything on that list/);
 });
 
-test('the plan prompt lists candidate ids and never asks for URLs', () => {
+test('the plan prompt lists candidate ids with their site and never asks for URLs', () => {
   const prompt = planPrompt(undefined, 'en', resources);
-  assert.match(prompt, /free-1 \| Docs \| P \| documentation \| free/);
-  assert.match(prompt, /paid-1 \| Course \| Q \| course \| paid/);
+  assert.match(prompt, /free-1 \| Docs \| P \| other \| documentation \| free/);
+  assert.match(prompt, /paid-1 \| Course \| Q \| other \| course \| paid/);
   assert.match(prompt, /Never write a URL/);
+});
+
+test('a known site shows through so a platform preference can be honoured', () => {
+  const yt = [
+    { id: 'v1', certificationId: 'x', title: 'T', provider: 'P', url: 'https://youtu.be/abc', duration: '10m', free: true, type: 'video' },
+  ] satisfies LearningResource[];
+  assert.match(planPrompt(undefined, 'en', yt), /v1 \| T \| P \| YouTube \| video \| free/);
+});
+
+test('preferences appear as tie-breakers, and only when set', () => {
+  const withPref = planPrompt(undefined, 'en', resources, { formats: ['video'], sites: ['YouTube'] });
+  assert.match(withPref, /Preferred formats: video/);
+  assert.match(withPref, /Preferred platforms: YouTube/);
+  assert.match(withPref, /tie-breakers, not filters/);
+  // No preference block at all when the learner stated none.
+  assert.doesNotMatch(planPrompt(undefined, 'en', resources, {}), /tie-breakers/);
+});
+
+test('knownFacts reports preferred formats and sites when present', () => {
+  const facts = knownFacts({
+    preferred_resource_formats: ['video', 'course'],
+    preferred_resource_sites: ['YouTube'],
+  });
+  assert.deepEqual(facts, [
+    { label: 'Study formats they prefer', value: 'video, course' },
+    { label: 'Learning platforms they prefer', value: 'YouTube' },
+  ]);
 });
 
 test('with no curated resources the model is told to leave weeks empty', () => {

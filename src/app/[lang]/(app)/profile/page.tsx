@@ -7,6 +7,7 @@ import { DIFFICULTY_ORDER } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/app/avatar';
+import { RESOURCE_FORMATS, RESOURCE_SITES } from '@/lib/resource-prefs';
 import { addLanguage, addSkill, removeLanguage, removeSkill, updateProfile } from './actions';
 
 /**
@@ -130,6 +131,27 @@ export default async function ProfilePage({ params }: { params: Promise<{ lang: 
           />
         </section>
 
+        <section className="flex flex-col gap-5">
+          <SectionHeading>{t.sectionPreferences}</SectionHeading>
+
+          <CheckboxGroup
+            legend={t.preferredFormats}
+            hint={t.preferredFormatsHint}
+            name="preferred_resource_formats"
+            options={RESOURCE_FORMATS.map((f) => ({ value: f, label: t.formats[f] }))}
+            selected={new Set(profile?.preferred_resource_formats ?? [])}
+          />
+
+          <CheckboxGroup
+            legend={t.preferredSites}
+            hint={t.preferredSitesHint}
+            name="preferred_resource_sites"
+            // Site labels are brand names; they read the same in every language.
+            options={RESOURCE_SITES.map((s) => ({ value: s, label: s }))}
+            selected={new Set(profile?.preferred_resource_sites ?? [])}
+          />
+        </section>
+
         <Button type="submit" className="self-start">
           {dict.common.save}
         </Button>
@@ -220,6 +242,56 @@ function Row({
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * A multi-select rendered as checkboxes, not <select multiple>: the native
+ * multi-select is a known usability trap (you have to know to ctrl-click, and
+ * touch devices barely support it), and checkboxes submit the same way — every
+ * checked box posts its value under the shared name, so the action reads them
+ * with formData.getAll. No client JS; the checked state is server-rendered.
+ */
+function CheckboxGroup({
+  legend,
+  hint,
+  name,
+  options,
+  selected,
+}: {
+  legend: string;
+  hint: string;
+  name: string;
+  options: { value: string; label: string }[];
+  selected: Set<string>;
+}) {
+  const hintId = `${name}-hint`;
+
+  return (
+    <fieldset className="flex flex-col gap-2">
+      <legend className="text-sm font-medium text-ink">{legend}</legend>
+      <p id={hintId} className="text-xs leading-relaxed text-ink-faint">
+        {hint}
+      </p>
+      <div className="mt-1 flex flex-wrap gap-2">
+        {options.map((o) => (
+          <label
+            key={o.value}
+            className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-rule bg-paper-raised px-3 py-1.5 text-sm text-ink hover:border-rule-strong has-[:checked]:border-accent has-[:checked]:bg-paper-sunken"
+          >
+            <input
+              type="checkbox"
+              name={name}
+              value={o.value}
+              defaultChecked={selected.has(o.value)}
+              aria-describedby={hintId}
+              className="accent-accent"
+            />
+            {o.label}
+          </label>
+        ))}
+      </div>
+    </fieldset>
   );
 }
 

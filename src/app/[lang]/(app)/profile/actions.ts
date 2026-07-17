@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { createClient, getUser } from '@/lib/supabase/server';
+import { RESOURCE_FORMATS, RESOURCE_SITES } from '@/lib/resource-prefs';
 
 /**
  * Server actions. Validation runs here because this is the trust boundary —
@@ -18,6 +19,11 @@ const profileSchema = z.object({
   budget: z.coerce.number().min(0).max(1_000_000).nullable(),
   daily_study_time: z.coerce.number().min(0).max(24).nullable(),
   weekly_availability: z.coerce.number().min(0).max(7).nullable(),
+  // Closed vocabularies from the shared list. Anything off-list fails the parse
+  // rather than reaching the row — the form only ever submits these, so an
+  // unexpected value means a tampered request, not a user mistake.
+  preferred_resource_formats: z.array(z.enum(RESOURCE_FORMATS)),
+  preferred_resource_sites: z.array(z.enum(RESOURCE_SITES)),
 });
 
 const emptyToNull = (v: FormDataEntryValue | null) => {
@@ -37,6 +43,9 @@ export async function updateProfile(formData: FormData) {
     budget: emptyToNull(formData.get('budget')),
     daily_study_time: emptyToNull(formData.get('daily_study_time')),
     weekly_availability: emptyToNull(formData.get('weekly_availability')),
+    // Checkbox groups: getAll returns every checked value, or [] if none.
+    preferred_resource_formats: formData.getAll('preferred_resource_formats'),
+    preferred_resource_sites: formData.getAll('preferred_resource_sites'),
   });
 
   if (!parsed.success) throw new Error('Those values are not valid');

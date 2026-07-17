@@ -3,6 +3,13 @@ import { APICallError, RetryError } from 'ai';
 import { z } from 'zod';
 import type { Certification, LearningResource } from '@/lib/types';
 import type { Locale } from '@/lib/i18n';
+// Relative with extension, not '@/lib/...': this module is run directly by
+// node --test, which resolves neither the @/ alias nor extensionless imports.
+// (The @/ type-only imports above are fine — they erase before node sees them.)
+import { siteOf } from '../resource-prefs.ts';
+
+/** A learner's soft preferences over resources. Empty arrays mean "no preference". */
+export type ResourcePreferences = { formats?: string[]; sites?: string[] };
 
 /**
  * Shared between the chat route and the plan route.
@@ -82,6 +89,8 @@ export function knownFacts(
     budget?: number | null;
     daily_study_time?: number | null;
     weekly_availability?: number | null;
+    preferred_resource_formats?: string[] | null;
+    preferred_resource_sites?: string[] | null;
   } | null,
   skills: string[] = [],
   languages: string[] = []
@@ -116,6 +125,11 @@ export function knownFacts(
     'Languages they can sit an exam in',
     languages.length > 0 ? languages.join(', ') : undefined
   );
+
+  const formats = profile?.preferred_resource_formats ?? [];
+  const sites = profile?.preferred_resource_sites ?? [];
+  push('Study formats they prefer', formats.length > 0 ? formats.join(', ') : undefined);
+  push('Learning platforms they prefer', sites.length > 0 ? sites.join(', ') : undefined);
 
   return facts;
 }
@@ -207,8 +221,26 @@ export function resourcesForBudget(
 export function planPrompt(
   cert: Certification | undefined,
   locale: Locale,
-  resources: LearningResource[] = []
+  resources: LearningResource[] = [],
+  preferences: ResourcePreferences = {}
 ): string {
+  const formats = preferences.formats ?? [];
+  const sites = preferences.sites ?? [];
+  // A preference is a tie-breaker, never a filter: excluding good resources a
+  // learner didn't pre-approve is how you hand someone a week with nothing in
+  // it. So this steers ordering, and the "do not exclude" line is load-bearing.
+  const preferenceLines =
+    formats.length > 0 || sites.length > 0
+      ? [
+          '',
+          'This learner has stated preferences. Treat them as tie-breakers, not filters:',
+          formats.length > 0 ? `- Preferred formats: ${formats.join(', ')}.` : '',
+          sites.length > 0 ? `- Preferred platforms: ${sites.join(', ')}.` : '',
+          '- When two resources fit a week equally well, put the preferred one first.',
+          '- Never drop a genuinely good resource just because it is not preferred, and never leave a week empty for the sake of a preference.',
+        ].filter(Boolean)
+      : [];
+
   return [
     `Produce a study plan in ${LANGUAGE[locale]} based on the conversation.`,
     'Pace it to the hours per day the user actually stated, not to an ideal schedule.',
@@ -226,14 +258,17 @@ export function planPrompt(
           '- Match the type to the week: documentation and courses while learning, practice-exam ids only in a practice or review week.',
           '- Reusing an id across weeks is fine when the resource genuinely spans them.',
           '- If nothing on the list fits a week, leave resourceIds empty rather than forcing one in.',
+          ...preferenceLines,
           '',
-          'Available resources:',
+          // Site is shown so the model can honour a platform preference; it is
+          // derived from the url, not a stored field.
+          'Available resources (id | title | provider | site | type | price | length):',
           resources
             .map(
               (r) =>
-                `- ${r.id} | ${r.title} | ${r.provider} | ${r.type} | ${
-                  r.free ? 'free' : 'paid'
-                } | ${r.duration}`
+                `- ${r.id} | ${r.title} | ${r.provider} | ${siteOf(r.url) ?? 'other'} | ${
+                  r.type
+                } | ${r.free ? 'free' : 'paid'} | ${r.duration}`
             )
             .join('\n'),
         ].join('\n')

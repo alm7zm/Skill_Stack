@@ -5,6 +5,7 @@ import { getDictionary } from '../../../dictionaries';
 import { isLocale } from '@/lib/i18n';
 import { getCertificationById } from '@/lib/data/certifications';
 import { getResourcesForCertification } from '@/lib/data/resources';
+import { siteOf } from '@/lib/resource-prefs';
 import { getUser } from '@/lib/supabase/server';
 import { formatCurrency, formatDate, formatNumber, formatStudyTime, interpolate } from '@/lib/utils';
 import { Card, CardWell } from '@/components/ui/card';
@@ -197,24 +198,30 @@ export default async function CertificationPage({
           <section className="mt-10">
             <h2 className="font-display text-xl font-semibold text-ink">{t.resources}</h2>
             <ul className="mt-4 flex flex-col gap-2">
-              {resources.map((r) => (
-                <li key={r.id}>
-                  <a
-                    href={r.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-between gap-4 rounded-md border border-rule bg-paper-raised px-4 py-3 transition-colors hover:border-rule-strong"
-                  >
-                    <span>
-                      <span className="block text-sm font-medium text-ink">{r.title}</span>
-                      <span className="block text-xs text-ink-faint">
-                        {r.provider} · {r.duration}
+              {resources.map((r) => {
+                // Site is derived from the url, not stored. Shown only when it is
+                // a platform we recognise; unknown hosts just don't get a tag.
+                const site = siteOf(r.url);
+                return (
+                  <li key={r.id}>
+                    <a
+                      href={r.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between gap-4 rounded-md border border-rule bg-paper-raised px-4 py-3 transition-colors hover:border-rule-strong"
+                    >
+                      <span>
+                        <span className="block text-sm font-medium text-ink">{r.title}</span>
+                        <span className="block text-xs text-ink-faint">
+                          {r.provider} · {r.duration}
+                          {site ? ` · ${site}` : ''}
+                        </span>
                       </span>
-                    </span>
-                    {r.free && <Badge tone="accent">{dict.common.free}</Badge>}
-                  </a>
-                </li>
-              ))}
+                      {r.free && <Badge tone="accent">{dict.common.free}</Badge>}
+                    </a>
+                  </li>
+                );
+              })}
               {resources.length === 0 && (
                 <li className="text-sm text-ink-faint">—</li>
               )}

@@ -10,7 +10,7 @@ constraints, and a proxy route would be app code whose only job is forwarding.
 | Workflow | Runs | Writes | Needs |
 |---|---|---|---|
 | `link-health.json` | Mondays 03:00 | Straight to the catalog | Supabase only |
-| `discover-resources.json` | Sundays 04:00 | Review queue only | Supabase + Tavily + Anthropic (Claude) |
+| `discover-resources.json` | Sundays 04:00 | Review queue only | Supabase + Tavily + Google Gemini |
 
 ## The rule these follow
 
@@ -61,21 +61,23 @@ enterprise feature, or `$env`, which needs `N8N_BLOCK_ENV_ACCESS_IN_NODE=false`.
 | Node | Header name | Header value |
 |---|---|---|
 | Search | `Authorization` | `Bearer tvly-...` from [tavily.com](https://tavily.com) |
-| Rank and classify | `x-api-key` | an Anthropic API key from [console.anthropic.com](https://console.anthropic.com) |
+| Rank and classify | `x-goog-api-key` | a Gemini API key from [aistudio.google.com](https://aistudio.google.com) |
 
-The ranking step calls **Claude** (`claude-opus-4-8`) through the Messages API,
-not Gemini. `output_config.format` constrains the reply to a JSON schema — the
-model returns `{results: [...]}` matching it exactly, so there is nothing to
-regex and no prose to mis-parse.
+The ranking step calls **Gemini** (`gemini-3.1-flash-lite`) through the
+`generateContent` API. `responseSchema` + `responseMimeType: application/json`
+constrain the reply — the model returns `{results: [...]}` matching it exactly,
+so there is nothing to regex and no prose to mis-parse.
 
-> **This is a separate, paid provider — deliberately.** It does *not* share the
-> advisor's Gemini free tier, so a discovery sweep can no longer 429 real users
-> out of the advisor for the rest of the day. It does cost money per run: the
-> model is `claude-opus-4-8`. For a weekly classification of short search
-> snippets, **`claude-haiku-4-5` is ~5× cheaper and more than capable** — change
-> the `model` field in the Rank-and-classify node's body if you'd rather run it
-> there. (Opus is the default only because downgrading for cost is your call to
-> make, not one to bake in silently.)
+> **Use a separate Gemini key from the advisor's.** Gemini's free quota is
+> counted **per Google Cloud project, not per API key**, so a second key in the
+> *same* project shares the advisor's daily limit — a discovery sweep could then
+> 429 real users out of the advisor. Create the key in a **new project**
+> (AI Studio → Create API key → *in a new project*) and leave billing off to
+> stay on the free tier. In practice the collision risk is small anyway — this
+> is a weekly batch of ~12–28 short calls at 04:00, when nobody is using the
+> advisor — but a separate project makes it zero. Free tier is enough for this;
+> for a sharper judge, swap the model name in the node's URL for a stronger
+> `flash` (tighter free limits).
 
 ### 5. Run once, by hand, before scheduling
 
@@ -119,7 +121,7 @@ Every Sunday 04:00
       └── Which certs need help?      (skip any with >= 4; build the query)
           └── Search                  (Tavily)
               └── Filter candidates   (drop known URLs and content farms)
-                  └── Rank and classify        (Claude, output_config.format)
+                  └── Rank and classify        (Gemini, responseSchema)
                       └── Check the model's homework
                           └── Propose it       (certification_reports)
 ```
@@ -142,11 +144,15 @@ Every Sunday 04:00
 Both bots and humans file into the same table, so there is one place to look:
 
 ```sql
-select created_at, source, confidence, certification_id, field, message, proposal
+select created_at, source, confidence, certification_id, field, source_site, message, proposal
 from certification_reports
 where status = 'open'
 order by source, confidence desc nulls last, created_at desc;
 ```
+
+`source_site` is filled by discovery only (e.g. `YouTube`, `Udemy`, or null for
+anything off the known-platform list) so a proposal's provenance reads at a
+glance. It is derived from the URL host, never typed by the model.
 
 Accept a proposed resource:
 

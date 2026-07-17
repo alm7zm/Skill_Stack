@@ -367,6 +367,18 @@
     "weeklyAvailabilityHint": "0 to 7. Days you will realistically open a book, not days you intend to.",
     "budgetHint": "US dollars, for courses, books and practice exams. Not the exam fee itself — that is listed on each certification. Enter 0 and you will only ever be shown free resources.",
     "budgetSuffix": "USD",
+    "sectionPreferences": "Learning preferences",
+    "preferredFormats": "Preferred formats",
+    "preferredFormatsHint": "The kinds of resource you learn best from. The advisor leans toward these when it builds your plan — it won't refuse a great resource in another format, it just prefers yours when it can.",
+    "preferredSites": "Preferred platforms",
+    "preferredSitesHint": "Sites you'd rather learn from. Same rule: a nudge, not a filter. Leave both empty and the advisor picks purely on fit.",
+    "formats": {
+      "video": "Video",
+      "course": "Course",
+      "documentation": "Documentation",
+      "practice-exam": "Practice exam",
+      "book": "Book"
+    },
     "skillsHint": "Things you can already do — Linux, Python, networking, Docker. The advisor spends less time on what you already know.",
     "languagesHint": "Spoken languages, not programming ones. Not every certification is offered in every language, and the advisor will tell you when this one is not.",
     "optional": "Optional",

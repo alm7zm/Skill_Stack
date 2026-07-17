@@ -182,6 +182,8 @@ export type ProfileRow = {
   budget: number | null;
   daily_study_time: number | null;
   weekly_availability: number | null;
+  preferred_resource_formats: string[];
+  preferred_resource_sites: string[];
 };
 
 export async function getProfile(): Promise<{
@@ -195,7 +197,7 @@ export async function getProfile(): Promise<{
     supabase
       .from('profiles')
       .select(
-        'id, email, full_name, avatar_url, career_goal, job_role, experience_level, budget, daily_study_time, weekly_availability'
+        'id, email, full_name, avatar_url, career_goal, job_role, experience_level, budget, daily_study_time, weekly_availability, preferred_resource_formats, preferred_resource_sites'
       )
       .maybeSingle(),
     supabase.from('user_skills').select('skill_name'),

@@ -4,6 +4,7 @@ import { getDictionary } from '../../../dictionaries';
 import { isLocale } from '@/lib/i18n';
 import { getPlan } from '@/lib/data/queries';
 import { getResourcesByIds } from '@/lib/data/resources';
+import { siteOf } from '@/lib/resource-prefs';
 import type { LearningResource } from '@/lib/types';
 import { formatDate, formatNumber, interpolate, pluralUnit } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
@@ -214,7 +215,9 @@ function WeekResources({
               >
                 {r.free ? labels.free : labels.paid}
               </span>
-              <span className="flex-none text-xs text-ink-faint">{r.provider}</span>
+              <span className="flex-none text-xs text-ink-faint">
+                {siteOf(r.url) ? `${r.provider} · ${siteOf(r.url)}` : r.provider}
+              </span>
             </a>
           </li>
         ))}
