@@ -118,6 +118,9 @@
   "auth": {
     "title": "Sign in to SkillStack",
     "subtitle": "Your plans and progress stay on your account.",
+    "signUpTitle": "Create your account",
+    "signUpSubtitle": "It's free. Your plans and progress stay on your account.",
+    "resetTitle": "Reset your password",
     "google": "Continue with Google",
     "emailLabel": "Email",
     "emailPlaceholder": "you@example.com",
@@ -128,6 +131,40 @@
     "hasAccount": "Already have an account?",
     "or": "or",
     "checkEmail": "Check your email for a confirmation link.",
+    "forgot": "Forgot your password?",
+    "reset": {
+      "body": "Enter your email and we'll send you a link to set a new password.",
+      "submit": "Send reset link",
+      "sent": "If that email has an account, a reset link is on its way.",
+      "back": "Back to sign in"
+    },
+    "update": {
+      "title": "Set a new password",
+      "body": "Pick something you haven't used elsewhere.",
+      "newPassword": "New password",
+      "submit": "Save password",
+      "done": "Password updated. Signing you in.",
+      "expired": "That reset link has expired or was already used. Request a new one."
+    },
+    "password": {
+      "show": "Show password",
+      "hide": "Hide password",
+      "strength": "Password strength",
+      "levels": {
+        "veryWeak": "Very weak",
+        "weak": "Weak",
+        "fair": "Fair",
+        "good": "Good",
+        "strong": "Strong"
+      },
+      "rules": {
+        "length": "8+ characters",
+        "uppercase": "A capital letter",
+        "lowercase": "A lowercase letter",
+        "number": "A number",
+        "special": "A symbol"
+      }
+    },
     "errors": {
       "generic": "We couldn't sign you in. Please try again.",
       "invalid": "That email or password isn't right.",

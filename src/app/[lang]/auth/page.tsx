@@ -28,14 +28,18 @@ export default async function AuthPage({
 
       <main id="main" className="relative flex flex-1 items-center justify-center px-6 pb-20">
         <div className="w-full max-w-sm">
-          <h1 className="font-display text-3xl font-semibold text-ink">{dict.auth.title}</h1>
-          <p className="mt-2 text-sm text-ink-muted">{dict.auth.subtitle}</p>
-
+          {/* The heading is rendered by AuthForm: it changes with the mode, and
+              the mode is client state. */}
           <AuthForm
             lang={lang}
             next={next}
             initialError={error}
             labels={{
+              title: dict.auth.title,
+              subtitle: dict.auth.subtitle,
+              signUpTitle: dict.auth.signUpTitle,
+              signUpSubtitle: dict.auth.signUpSubtitle,
+              resetTitle: dict.auth.resetTitle,
               google: dict.auth.google,
               emailLabel: dict.auth.emailLabel,
               emailPlaceholder: dict.auth.emailPlaceholder,
@@ -46,6 +50,12 @@ export default async function AuthPage({
               hasAccount: dict.auth.hasAccount,
               or: dict.auth.or,
               checkEmail: dict.auth.checkEmail,
+              forgot: dict.auth.forgot,
+              backToSignIn: dict.auth.reset.back,
+              resetBody: dict.auth.reset.body,
+              resetSubmit: dict.auth.reset.submit,
+              resetSent: dict.auth.reset.sent,
+              password: dict.auth.password,
               errors: dict.auth.errors,
             }}
           />
