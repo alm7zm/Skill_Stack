@@ -122,6 +122,13 @@
     "signUpSubtitle": "It's free. Your plans and progress stay on your account.",
     "resetTitle": "Reset your password",
     "google": "Continue with Google",
+    "nameLabel": "Name",
+    "namePlaceholder": "Your name",
+    "terms": {
+      "agree": "I agree to the {terms} and the {privacy}.",
+      "termsLink": "Terms of Service",
+      "privacyLink": "Privacy Policy"
+    },
     "emailLabel": "Email",
     "emailPlaceholder": "you@example.com",
     "passwordLabel": "Password",
@@ -178,7 +185,9 @@
       "passwordShort": "Passwords need at least 8 characters.",
       "notConfirmed": "This account hasn't been confirmed yet. Use the link we emailed you, or send a new one.",
       "rateLimit": "We've sent too many emails recently. Please try again later.",
-      "exists": "An account with that email already exists. Sign in instead."
+      "exists": "An account with that email already exists. Sign in instead.",
+      "nameRequired": "Enter your name.",
+      "termsRequired": "Please accept the terms to create an account."
     }
   },
   "home": {

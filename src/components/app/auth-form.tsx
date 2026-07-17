@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -21,11 +22,14 @@ type Labels = {
   signUpSubtitle: string;
   resetTitle: string;
   google: string;
+  nameLabel: string;
+  namePlaceholder: string;
   emailLabel: string;
   emailPlaceholder: string;
   passwordLabel: string;
   signIn: string;
   signUp: string;
+  terms: { agree: string; termsLink: string; privacyLink: string };
   noAccount: string;
   hasAccount: string;
   or: string;
@@ -53,6 +57,8 @@ type Labels = {
     notConfirmed: string;
     rateLimit: string;
     exists: string;
+    nameRequired: string;
+    termsRequired: string;
   };
 };
 
@@ -81,12 +87,20 @@ export function AuthForm({
 }) {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>('signin');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [errors, setErrors] = useState<{ email?: string; password?: string; form?: string }>(
-    initialError ? { form: labels.errors.generic } : {}
+  const [agreed, setAgreed] = useState(false);
+  const [errors, setErrors] = useState<{
+    name?: string;
+    email?: string;
+    password?: string;
+    terms?: string;
+    form?: string;
+  }>(initialError ? { form: labels.errors.generic } : {});
+  const [touched, setTouched] = useState<{ name?: boolean; email?: boolean; password?: boolean }>(
+    {}
   );
-  const [touched, setTouched] = useState<{ email?: boolean; password?: boolean }>({});
   const [notice, setNotice] = useState<string>();
   const [busy, setBusy] = useState(false);
   // Set when the account exists and the password was right, but the address was
@@ -109,13 +123,22 @@ export function AuthForm({
     return undefined;
   }
 
+  function nameError(value: string) {
+    if (mode === 'signup' && !value.trim()) return labels.errors.nameRequired;
+    return undefined;
+  }
+
   function validate() {
     const found: typeof errors = { email: emailError(email) };
     if (mode !== 'reset') found.password = passwordError(password);
+    if (mode === 'signup') {
+      found.name = nameError(name);
+      if (!agreed) found.terms = labels.errors.termsRequired;
+    }
 
     setErrors(found);
-    setTouched({ email: true, password: true });
-    return !found.email && !found.password;
+    setTouched({ name: true, email: true, password: true });
+    return !found.email && !found.password && !found.name && !found.terms;
   }
 
   function switchMode(nextMode: Mode) {
@@ -202,7 +225,14 @@ export function AuthForm({
         : await supabase.auth.signUp({
             email,
             password,
-            options: { emailRedirectTo: callback(next ?? `/${lang}/home`) },
+            options: {
+              emailRedirectTo: callback(next ?? `/${lang}/home`),
+              // Lands in raw_user_meta_data, which the handle_new_user trigger
+              // already copies into profiles.full_name — it was only ever
+              // populated for Google users, so email signups were greeted by the
+              // part of their address before the @.
+              data: { full_name: name.trim() },
+            },
           });
 
     setBusy(false);
@@ -257,6 +287,33 @@ export function AuthForm({
 
       {mode !== 'reset' && (
         <div className="mt-8">
+          {/* Segmented switch. Plain buttons with aria-pressed rather than the
+              ARIA tab pattern: tabs promise arrow-key navigation between tabs and
+              a labelled tabpanel, and claiming that without implementing it is
+              worse for a screen reader than not claiming it. */}
+          <div
+            role="group"
+            aria-label={labels.signIn + ' / ' + labels.signUp}
+            className="mb-6 flex rounded-md border border-rule bg-paper-sunken p-1"
+          >
+            {(['signin', 'signup'] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => switchMode(m)}
+                aria-pressed={mode === m}
+                className={cn(
+                  'flex-1 rounded-sm px-4 py-1.5 text-sm font-medium transition-colors',
+                  mode === m
+                    ? 'bg-paper-raised text-ink shadow-sm'
+                    : 'text-ink-muted hover:text-ink'
+                )}
+              >
+                {m === 'signin' ? labels.signIn : labels.signUp}
+              </button>
+            ))}
+          </div>
+
           <Button
             type="button"
             variant="secondary"
@@ -284,12 +341,34 @@ export function AuthForm({
         noValidate
         className={cn('flex flex-col gap-4', mode === 'reset' && 'mt-8')}
       >
+        {mode === 'signup' && (
+          <Field
+            label={labels.nameLabel}
+            type="text"
+            name="name"
+            autoComplete="name"
+            placeholder={labels.namePlaceholder}
+            icon={<UserIcon />}
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value);
+              if (touched.name) setErrors((p) => ({ ...p, name: nameError(e.target.value) }));
+            }}
+            onBlur={() => {
+              setTouched((p) => ({ ...p, name: true }));
+              setErrors((p) => ({ ...p, name: nameError(name) }));
+            }}
+            error={errors.name}
+          />
+        )}
+
         <Field
           label={labels.emailLabel}
           type="email"
           name="email"
           autoComplete="email"
           placeholder={labels.emailPlaceholder}
+          icon={<MailIcon />}
           value={email}
           onChange={(e) => {
             setEmail(e.target.value);
@@ -310,6 +389,7 @@ export function AuthForm({
               name="password"
               autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
               value={password}
+              icon={<LockIcon />}
               reveal={{ show: labels.password.show, hide: labels.password.hide }}
               onChange={(e) => {
                 setPassword(e.target.value);
@@ -346,6 +426,54 @@ export function AuthForm({
                   {labels.forgot}
                 </button>
               </div>
+            )}
+          </div>
+        )}
+
+        {mode === 'signup' && (
+          <div>
+            <label className="flex cursor-pointer items-start gap-2">
+              <input
+                type="checkbox"
+                checked={agreed}
+                onChange={(e) => {
+                  setAgreed(e.target.checked);
+                  if (e.target.checked) setErrors((p) => ({ ...p, terms: undefined }));
+                }}
+                aria-describedby={errors.terms ? 'terms-error' : undefined}
+                className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
+              />
+              {/* Split on the placeholders rather than concatenating fragments:
+                  Arabic puts the links in a different order, and gluing
+                  "I agree to the" + link + "and" + link hard-codes English syntax. */}
+              <span className="text-xs text-ink-muted">
+                {labels.terms.agree.split(/(\{terms\}|\{privacy\})/).map((part, i) =>
+                  part === '{terms}' ? (
+                    <Link
+                      key={i}
+                      href={`/${lang}/terms`}
+                      className="text-accent underline decoration-accent/30 underline-offset-2 hover:decoration-accent"
+                    >
+                      {labels.terms.termsLink}
+                    </Link>
+                  ) : part === '{privacy}' ? (
+                    <Link
+                      key={i}
+                      href={`/${lang}/privacy`}
+                      className="text-accent underline decoration-accent/30 underline-offset-2 hover:decoration-accent"
+                    >
+                      {labels.terms.privacyLink}
+                    </Link>
+                  ) : (
+                    <span key={i}>{part}</span>
+                  )
+                )}
+              </span>
+            </label>
+            {errors.terms && (
+              <p id="terms-error" role="alert" className="mt-1 text-xs text-danger">
+                {errors.terms}
+              </p>
             )}
           </div>
         )}
@@ -400,6 +528,55 @@ export function AuthForm({
         )}
       </p>
     </div>
+  );
+}
+
+/**
+ * Inline rather than an icon package: three glyphs at ~12 lines each do not
+ * justify lucide-react, which the rebuild removed. All aria-hidden — each one
+ * sits beside a real <label> that already names the field.
+ */
+function FieldIcon({ children }: { children: React.ReactNode }) {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {children}
+    </svg>
+  );
+}
+
+function UserIcon() {
+  return (
+    <FieldIcon>
+      <circle cx="10" cy="6.5" r="3" />
+      <path d="M3.5 16.5a6.5 6.5 0 0 1 13 0" />
+    </FieldIcon>
+  );
+}
+
+function MailIcon() {
+  return (
+    <FieldIcon>
+      <rect x="2.5" y="4.5" width="15" height="11" rx="2" />
+      <path d="m3 6 7 5 7-5" />
+    </FieldIcon>
+  );
+}
+
+function LockIcon() {
+  return (
+    <FieldIcon>
+      <rect x="4" y="8.5" width="12" height="8" rx="1.5" />
+      <path d="M6.75 8.5V6a3.25 3.25 0 0 1 6.5 0v2.5" />
+    </FieldIcon>
   );
 }
 

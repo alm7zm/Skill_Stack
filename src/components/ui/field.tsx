@@ -16,6 +16,7 @@ export function Field({
   error,
   hint,
   reveal,
+  icon,
   className,
   id: providedId,
   type,
@@ -26,6 +27,9 @@ export function Field({
   hint?: string;
   /** Pass labels on a password field to offer a show/hide toggle. */
   reveal?: { show: string; hide: string };
+  /** Decorative glyph at the inline start. Purely a visual anchor — the <label>
+   *  is what names the field, so this stays aria-hidden. */
+  icon?: React.ReactNode;
   className?: string;
 } & React.InputHTMLAttributes<HTMLInputElement>) {
   const generatedId = useId();
@@ -44,6 +48,15 @@ export function Field({
       </label>
 
       <div className="relative">
+        {icon && (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute start-3 top-0 flex h-10 items-center text-ink-faint"
+          >
+            {icon}
+          </span>
+        )}
+
         <input
           id={id}
           type={inputType}
@@ -53,8 +66,10 @@ export function Field({
             'h-10 w-full rounded-md border bg-paper-raised px-3 text-sm text-ink',
             'placeholder:text-ink-faint',
             'transition-colors duration-150',
-            // Logical padding: the toggle sits at the inline end, which is the
-            // right in English and the left in Arabic. pe-* follows it for free.
+            // Logical padding: the icon sits at the inline start and the toggle at
+            // the inline end — right in English, left in Arabic. ps-/pe-* follow
+            // them for free.
+            icon && 'ps-10',
             canReveal && 'pe-11',
             error
               ? 'border-danger focus-visible:outline-danger'
@@ -88,11 +103,32 @@ export function Field({
       )}
 
       {error && (
-        <p id={errorId} role="alert" className="text-xs text-danger">
+        <p id={errorId} role="alert" className="flex items-center gap-1 text-xs text-danger">
+          <AlertIcon />
           {error}
         </p>
       )}
     </div>
+  );
+}
+
+/** aria-hidden: the message beside it already says everything this conveys. */
+function AlertIcon() {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      className="h-3 w-3 shrink-0"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M8 2.5 1.5 13.5h13L8 2.5Z" />
+      <path d="M8 6.5v3" />
+      <path d="M8 11.75v.25" />
+    </svg>
   );
 }
 
