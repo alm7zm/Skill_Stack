@@ -18,10 +18,13 @@ export default async function AdvisorPage({
   const cert = await getCertificationById(certId);
   if (!cert) notFound();
 
-  const [dict, { profile }] = await Promise.all([getDictionary(lang), getProfile()]);
+  const [dict, { profile, skills, languages }] = await Promise.all([
+    getDictionary(lang),
+    getProfile(),
+  ]);
   const t = dict.advisor;
 
-  const known = summarise(profile, lang, dict);
+  const known = summarise(profile, skills, languages, lang, dict);
 
   return (
     <div className="mx-auto flex min-h-[calc(100dvh-4rem)] max-w-3xl flex-col px-6 py-8">
@@ -108,10 +111,12 @@ function summarise(
     daily_study_time?: number | null;
     weekly_availability?: number | null;
   } | null,
+  skills: string[],
+  languages: string[],
   lang: Locale,
   dict: Dict
 ): { label: string; value: string }[] {
-  if (!profile) return [];
+  if (!profile && skills.length === 0 && languages.length === 0) return [];
 
   const t = dict.profile;
   const facts: { label: string; value: string }[] = [];
@@ -120,15 +125,15 @@ function summarise(
     facts.push({ label, value });
   };
 
-  push(t.careerGoal, profile.career_goal);
-  push(t.jobRole, profile.job_role);
+  push(t.careerGoal, profile?.career_goal);
+  push(t.jobRole, profile?.job_role);
 
-  const level = profile.experience_level;
+  const level = profile?.experience_level;
   if (level && level in dict.difficulty) {
     push(t.experienceLevel, dict.difficulty[level as keyof Dict['difficulty']]);
   }
 
-  if (profile.daily_study_time) {
+  if (profile?.daily_study_time) {
     push(
       t.dailyStudyTime,
       `${formatNumber(profile.daily_study_time, lang)} ${pluralUnit(
@@ -139,14 +144,14 @@ function summarise(
     );
   }
 
-  if (profile.weekly_availability) {
+  if (profile?.weekly_availability) {
     push(t.weeklyAvailability, formatNumber(profile.weekly_availability, lang));
   }
 
   // 0 is meaningful here — "free resources only" — so it must not be dropped by
   // a falsy check the way the two above deliberately are (0 hours a day is not
   // a fact worth stating, it is an unfinished profile).
-  if (profile.budget !== null && profile.budget !== undefined) {
+  if (profile?.budget !== null && profile?.budget !== undefined) {
     push(
       t.budget,
       profile.budget === 0
@@ -154,6 +159,11 @@ function summarise(
         : formatCurrency(profile.budget, lang, 'USD')
     );
   }
+
+  // Shown because the advisor now reads them. Until this commit both lists were
+  // collected and never used by anything.
+  if (skills.length > 0) push(dict.advisor.known.skills, skills.join(', '));
+  if (languages.length > 0) push(dict.advisor.known.languages, languages.join(', '));
 
   return facts;
 }

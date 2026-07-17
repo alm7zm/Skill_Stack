@@ -46,7 +46,7 @@ export async function POST(req: Request) {
   // advisor stops asking about, so a browser must not be able to claim
   // "experience_level: expert" and skip the question. RLS scopes it to the
   // caller anyway.
-  const [cert, catalog, { profile }] = await Promise.all([
+  const [cert, catalog, { profile, skills, languages }] = await Promise.all([
     getCertificationById(certId),
     getAllCertifications(),
     getProfile(),
@@ -60,7 +60,7 @@ export async function POST(req: Request) {
   let failure: unknown;
   const result = streamText({
     model: advisorModel,
-    system: systemPrompt(cert, locale, catalog, knownFacts(profile)),
+    system: systemPrompt(cert, locale, catalog, knownFacts(profile, skills, languages)),
     messages,
     onError({ error }) {
       failure = error;

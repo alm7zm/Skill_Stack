@@ -51,15 +51,17 @@ export default async function CertificationPage({
   const cert = await getCertificationById(id);
   if (!cert) notFound();
 
-  const dict = await getDictionary(lang);
-  const t = dict.certification;
-  const resources = getResourcesForCertification(cert.id);
   // Free: the (app) layout already reads cookies to draw the nav, so this route
-  // is server-rendered per request either way. Knowing this up front means a
+  // is server-rendered per request either way. Knowing the user up front means a
   // signed-out visitor is sent to sign in *before* writing a report, rather than
   // after — a form action resets the form, so asking afterwards discards
   // everything they just typed.
-  const user = await getUser();
+  const [dict, resources, user] = await Promise.all([
+    getDictionary(lang),
+    getResourcesForCertification(cert.id),
+    getUser(),
+  ]);
+  const t = dict.certification;
 
   const facts = [
     {

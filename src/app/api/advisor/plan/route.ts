@@ -44,7 +44,7 @@ export async function POST(req: Request) {
   }
 
   const { certId, locale, messages } = parsed.data;
-  const [cert, catalog, { profile }] = await Promise.all([
+  const [cert, catalog, { profile, skills, languages }] = await Promise.all([
     getCertificationById(certId),
     getAllCertifications(),
     getProfile(),
@@ -55,7 +55,10 @@ export async function POST(req: Request) {
 
   // Budget filtering happens before the model sees the list, so "free only" is
   // a fact about what exists rather than an instruction it might skip.
-  const offered = resourcesForBudget(getResourcesForCertification(cert.id), profile?.budget);
+  const offered = resourcesForBudget(
+    await getResourcesForCertification(cert.id),
+    profile?.budget
+  );
 
   // Unlike streamText, generateObject rejects — so the failure arrives here and
   // gets the same treatment, otherwise a quota rejection would surface as an
@@ -65,7 +68,7 @@ export async function POST(req: Request) {
     ({ object: plan } = await generateObject({
       model: advisorModel,
       schema: planSchema,
-      system: systemPrompt(cert, locale, catalog, knownFacts(profile)),
+      system: systemPrompt(cert, locale, catalog, knownFacts(profile, skills, languages)),
       prompt: `${planPrompt(cert, locale, offered)}\n\nConversation so far:\n${messages
         .map((m) => `${m.role}: ${m.content}`)
         .join('\n')}`,

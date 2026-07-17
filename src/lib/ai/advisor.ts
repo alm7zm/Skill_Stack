@@ -74,15 +74,19 @@ export type KnownFacts = { label: string; value: string }[];
  * copy. The model is told to reply in the user's language and does — feeding it
  * translated field names would only make the mapping fuzzier.
  */
-export function knownFacts(profile: {
-  career_goal?: string | null;
-  job_role?: string | null;
-  experience_level?: string | null;
-  budget?: number | null;
-  daily_study_time?: number | null;
-  weekly_availability?: number | null;
-} | null): KnownFacts {
-  if (!profile) return [];
+export function knownFacts(
+  profile: {
+    career_goal?: string | null;
+    job_role?: string | null;
+    experience_level?: string | null;
+    budget?: number | null;
+    daily_study_time?: number | null;
+    weekly_availability?: number | null;
+  } | null,
+  skills: string[] = [],
+  languages: string[] = []
+): KnownFacts {
+  if (!profile && skills.length === 0 && languages.length === 0) return [];
 
   const facts: KnownFacts = [];
   const push = (label: string, value: string | number | null | undefined) => {
@@ -92,17 +96,27 @@ export function knownFacts(profile: {
     facts.push({ label, value: String(value) });
   };
 
-  push('Their career goal', profile.career_goal);
-  push('Their current role', profile.job_role);
-  push('Their self-reported experience level', profile.experience_level);
-  push('Hours they can study per day', profile.daily_study_time);
-  push('Days per week they are available', profile.weekly_availability);
-  if (profile.budget !== null && profile.budget !== undefined) {
+  push('Their career goal', profile?.career_goal);
+  push('Their current role', profile?.job_role);
+  push('Their self-reported experience level', profile?.experience_level);
+  push('Hours they can study per day', profile?.daily_study_time);
+  push('Days per week they are available', profile?.weekly_availability);
+  if (profile?.budget !== null && profile?.budget !== undefined) {
     push(
       'Their budget for learning materials',
       profile.budget === 0 ? '0 — they can only use free resources' : `${profile.budget} USD`
     );
   }
+
+  // Skills and languages were collected by the profile and read by nothing —
+  // the user typed them in and no part of the app ever looked. They are the two
+  // facts the advisor most obviously should not be re-asking for.
+  push('Skills they already have', skills.length > 0 ? skills.join(', ') : undefined);
+  push(
+    'Languages they can sit an exam in',
+    languages.length > 0 ? languages.join(', ') : undefined
+  );
+
   return facts;
 }
 
@@ -140,6 +154,9 @@ export function systemPrompt(
           'Do not ask about anything on that list. Take it as given and reason from it.',
           'You may ask them to confirm a specific item only if their answers contradict it.',
           'Ask only for what is genuinely missing — typically why they want this particular certification, and their target date.',
+          // The catalog knows which languages each exam is offered in, and the
+          // profile knows which they read. Nothing was comparing the two.
+          'If none of the languages they can sit an exam in appear in this exam\'s language list, say so plainly and early — it is a hard blocker, not a detail.',
           '',
         ].join('\n')
       : '',
@@ -160,6 +177,10 @@ export function systemPrompt(
           `- Exam: ${cert.examDuration} minutes, ${cert.numberOfQuestions} questions, pass mark ${cert.passingScore}%`,
           `- Prerequisites: ${cert.prerequisites.length ? cert.prerequisites.join(', ') : 'none'}`,
           `- Skills covered: ${cert.skillsGained.join(', ')}`,
+          // The catalog has always stored this and the prompt never passed it,
+          // so the model could not have answered "can I sit this in Arabic?"
+          // even though the row next to it says.
+          `- Offered in: ${cert.languages.length ? cert.languages.join(', ') : 'unknown'}`,
         ].join('\n')
       : 'No specific certification has been chosen yet. Help them pick one.',
   ].join('\n');

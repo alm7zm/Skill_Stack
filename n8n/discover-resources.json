@@ -1,0 +1,312 @@
+{
+  "name": "SkillStack — discover resources (proposes only)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "weeksInterval": 1,
+              "triggerAtDay": [
+                0
+              ],
+              "triggerAtHour": 4
+            }
+          ]
+        }
+      },
+      "id": "8c2b7e30-0002-4a00-9000-000000000001",
+      "name": "Every Sunday 04:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "certifications",
+        "returnAll": true
+      },
+      "id": "8c2b7e30-0002-4a00-9000-000000000002",
+      "name": "Get certifications",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL_ID",
+          "name": "SkillStack Supabase (service_role)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "certification_resources",
+        "returnAll": true
+      },
+      "id": "8c2b7e30-0002-4a00-9000-000000000003",
+      "name": "Get existing resources",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        0,
+        180
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL_ID",
+          "name": "SkillStack Supabase (service_role)"
+        }
+      },
+      "notes": "Including dead ones. A resource that 404'd last month must not be rediscovered and proposed back in as new."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pick which certifications are worth spending a search on, and build\n// the query. Every call downstream costs money, so this node exists to\n// not make most of them.\n\nconst certs = $('Get certifications').all().map((i) => i.json);\nconst existing = $('Get existing resources').all().map((i) => i.json);\n\nconst countByCert = new Map();\nfor (const r of existing) {\n  countByCert.set(r.certification_id, (countByCert.get(r.certification_id) ?? 0) + 1);\n}\n\n// Known hosts, so an already-proposed or already-stored URL is never\n// offered again. Compared on hostname+path, ignoring query strings and\n// trailing slashes, because ?ranMID=42 does not make it a new course.\nconst normalise = (u) => {\n  try {\n    const { hostname, pathname } = new URL(u);\n    return (hostname + pathname).replace(/\\/$/, '').toLowerCase();\n  } catch {\n    return u;\n  }\n};\nconst known = new Set(existing.map((r) => normalise(r.url)));\n\nconst out = [];\nfor (const c of certs) {\n  const have = countByCert.get(c.id) ?? 0;\n\n  // Four is enough for a plan to draw on. Certifications already at four\n  // are skipped entirely — this workflow exists to fill the 16 that have\n  // nothing, not to pile a fifth Udemy course onto AWS SAA.\n  if (have >= 4) continue;\n\n  out.push({\n    json: {\n      certification_id: c.id,\n      name: c.name,\n      short_name: c.short_name,\n      provider: c.provider,\n      have,\n      known: [...known],\n      // Deliberately narrow. \"AWS SAA\" alone returns bootcamp spam; the\n      // words below bias toward the kinds of page worth linking.\n      query: `${c.name} (${c.short_name}) official study guide OR free course OR documentation OR practice exam`,\n    },\n  });\n}\n\nif (out.length === 0) {\n  // Nothing to do is a normal outcome, not an error.\n  return [];\n}\n\nreturn out;"
+      },
+      "id": "8c2b7e30-0002-4a00-9000-000000000004",
+      "name": "Which certs need help?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.tavily.com/search",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ query: $json.query, max_results: 8, search_depth: 'basic' }) }}",
+        "options": {}
+      },
+      "id": "8c2b7e30-0002-4a00-9000-000000000005",
+      "name": "Search",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        480,
+        0
+      ],
+      "notes": "Tavily because it returns clean text per result rather than HTML to scrape. Swap for Brave or SerpAPI by changing this one node — nothing downstream knows which engine answered. The key lives in an n8n Header Auth credential (Authorization / Bearer tvly-...), never in this file.",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_ME",
+          "name": "Tavily (Authorization: Bearer tvly-...)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Turn search hits into candidates the model can judge, and throw away\n// the ones no model should have to look at.\n\nconst src = $('Which certs need help?').item.json;\n\nconst normalise = (u) => {\n  try {\n    const { hostname, pathname } = new URL(u);\n    return (hostname + pathname).replace(/\\/$/, '').toLowerCase();\n  } catch {\n    return u;\n  }\n};\nconst known = new Set(src.known);\n\n// Aggregators, content farms and link-bait. A resource nobody would sit\n// down and work through is not a resource.\nconst BLOCK = [\n  'pinterest.', 'quora.com', 'reddit.com/r/', 'facebook.com',\n  'slideshare.net', 'scribd.com', 'coursehero.com', 'chegg.com',\n  'examtopics.com', 'braindump', 'dumps',\n];\n\nconst results = $json.results ?? [];\nconst candidates = results\n  .filter((r) => r.url && !known.has(normalise(r.url)))\n  .filter((r) => !BLOCK.some((b) => r.url.toLowerCase().includes(b)))\n  .slice(0, 6)\n  .map((r) => ({\n    url: r.url,\n    title: r.title,\n    snippet: String(r.content ?? '').slice(0, 400),\n  }));\n\nif (candidates.length === 0) return [];\n\nreturn [{ json: { ...src, candidates } }];"
+      },
+      "id": "8c2b7e30-0002-4a00-9000-000000000006",
+      "name": "Filter candidates",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        700,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  system_instruction: { parts: [{ text: 'You classify study resources for IT certifications. You are strict: most search results are not worth a learner\\'s time. Judge only from the title, url and snippet given. Never invent a url — copy it exactly from the candidate. If nothing is genuinely good, return an empty array. An empty array is a correct and common answer.' }] },\n  contents: [{ role: 'user', parts: [{ text: 'Certification: ' + $json.name + ' (' + $json.short_name + ') by ' + $json.provider + '\\n\\nCandidates:\\n' + $json.candidates.map((c, i) => (i+1) + '. ' + c.title + '\\n   ' + c.url + '\\n   ' + c.snippet).join('\\n\\n') + '\\n\\nReturn the ones an actual learner should use.' }] }],\n  generationConfig: {\n    responseMimeType: 'application/json',\n    responseSchema: {\n      type: 'ARRAY',\n      items: {\n        type: 'OBJECT',\n        properties: {\n          url: { type: 'STRING' },\n          title: { type: 'STRING' },\n          provider: { type: 'STRING' },\n          type: { type: 'STRING', enum: ['course', 'documentation', 'video', 'practice-exam', 'book'] },\n          free: { type: 'BOOLEAN' },\n          duration: { type: 'STRING' },\n          ai_reason: { type: 'STRING' },\n          confidence: { type: 'NUMBER' }\n        },\n        required: ['url', 'title', 'provider', 'type', 'free', 'duration', 'ai_reason', 'confidence']\n      }\n    }\n  }\n}) }}",
+        "options": {},
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "id": "8c2b7e30-0002-4a00-9000-000000000007",
+      "name": "Rank and classify",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        920,
+        0
+      ],
+      "notes": "responseSchema forces valid JSON out of the model rather than prose to regex. free/duration are the model's guess, which is exactly why this proposes rather than writes. Key lives in a Header Auth credential (x-goog-api-key). This shares the advisor's Gemini quota — see n8n/README.md.",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_ME",
+          "name": "Gemini (x-goog-api-key)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Unpack the model's answer and refuse to trust it.\n//\n// Two things get checked here rather than at review time, because a human\n// triaging fifty rows will not check them: the url must be one we actually\n// offered (models paraphrase urls), and confidence must clear a bar worth\n// a person's attention.\n\nconst src = $('Filter candidates').item.json;\nconst offered = new Map(src.candidates.map((c) => [c.url, c]));\n\nlet picks = [];\ntry {\n  const text = $json.candidates?.[0]?.content?.parts?.[0]?.text ?? '[]';\n  picks = JSON.parse(text);\n} catch (e) {\n  // A malformed answer is a dropped run, not a bad row in the database.\n  return [];\n}\n\nconst out = [];\nfor (const p of Array.isArray(picks) ? picks : []) {\n  // The url must be one we handed it. This is the whole defence against a\n  // confident, plausible, invented link — the same rule the advisor's\n  // resourceIds follow, for the same reason.\n  if (!offered.has(p.url)) continue;\n  if (typeof p.confidence !== 'number' || p.confidence < 0.6) continue;\n\n  out.push({\n    json: {\n      certification_id: src.certification_id,\n      message:\n        `Found a possible ${p.type} for ${src.name}: ${p.title} (${p.provider}). ` +\n        `${p.free ? 'Appears free' : 'Appears paid'}. ${p.ai_reason} — ${p.url}`,\n      confidence: Math.min(1, Math.max(0, p.confidence)),\n      // Exactly the shape of a certification_resources row, so accepting\n      // this is a copy-paste rather than a retyping exercise.\n      proposal: JSON.stringify({\n        certification_id: src.certification_id,\n        title: p.title,\n        provider: p.provider,\n        url: p.url,\n        duration: p.duration,\n        free: p.free,\n        type: p.type,\n        ai_reason: p.ai_reason,\n        evidence: offered.get(p.url)?.snippet,\n        found_at: new Date().toISOString(),\n      }),\n    },\n  });\n}\n\nreturn out;"
+      },
+      "id": "8c2b7e30-0002-4a00-9000-000000000008",
+      "name": "Check the model's homework",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1140,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "certification_reports",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "certification_id",
+              "fieldValue": "={{ $json.certification_id }}"
+            },
+            {
+              "fieldId": "source",
+              "fieldValue": "n8n"
+            },
+            {
+              "fieldId": "field",
+              "fieldValue": "resource_new"
+            },
+            {
+              "fieldId": "message",
+              "fieldValue": "={{ $json.message }}"
+            },
+            {
+              "fieldId": "confidence",
+              "fieldValue": "={{ $json.confidence }}"
+            },
+            {
+              "fieldId": "proposal",
+              "fieldValue": "={{ $json.proposal }}"
+            }
+          ]
+        }
+      },
+      "id": "8c2b7e30-0002-4a00-9000-000000000009",
+      "name": "Propose it",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1380,
+        0
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL_ID",
+          "name": "SkillStack Supabase (service_role)"
+        }
+      },
+      "notes": "Writes to the review queue, never to certification_resources. Nothing here reaches a user until someone reads the row and inserts it themselves. status defaults to 'open'."
+    }
+  ],
+  "connections": {
+    "Every Sunday 04:00": {
+      "main": [
+        [
+          {
+            "node": "Get certifications",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get existing resources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get existing resources": {
+      "main": [
+        [
+          {
+            "node": "Which certs need help?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Which certs need help?": {
+      "main": [
+        [
+          {
+            "node": "Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search": {
+      "main": [
+        [
+          {
+            "node": "Filter candidates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter candidates": {
+      "main": [
+        [
+          {
+            "node": "Rank and classify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rank and classify": {
+      "main": [
+        [
+          {
+            "node": "Check the model's homework",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check the model's homework": {
+      "main": [
+        [
+          {
+            "node": "Propose it",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

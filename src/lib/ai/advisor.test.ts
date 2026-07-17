@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { knownFacts, planPrompt, resourcesForBudget } from './advisor.ts';
+import { knownFacts, planPrompt, resourcesForBudget, systemPrompt } from './advisor.ts';
 import type { LearningResource } from '@/lib/types';
 
 const resources = [
@@ -43,6 +43,35 @@ test('knownFacts reports what the profile holds', () => {
     facts.map((f) => f.value),
     ['beginner', '2']
   );
+});
+
+test('knownFacts carries skills and languages — they used to go nowhere', () => {
+  const facts = knownFacts(null, ['Linux', 'Python'], ['Arabic', 'English']);
+  assert.deepEqual(facts, [
+    { label: 'Skills they already have', value: 'Linux, Python' },
+    { label: 'Languages they can sit an exam in', value: 'Arabic, English' },
+  ]);
+});
+
+test('knownFacts omits empty skill and language lists', () => {
+  assert.deepEqual(knownFacts(null, [], []), []);
+});
+
+test('a profile with only skills still produces facts', () => {
+  // The early return keys off all three being empty, not off profile alone —
+  // a user who filled in nothing but skills must not be reported as unknown.
+  assert.equal(knownFacts(null, ['Docker'], []).length, 1);
+});
+
+test('the known block tells the model not to re-ask, and to check exam language', () => {
+  const prompt = systemPrompt(undefined, 'en', [], knownFacts({ experience_level: 'beginner' }));
+  assert.match(prompt, /Do not ask about anything on that list/);
+  assert.match(prompt, /already told SkillStack/);
+});
+
+test('an empty profile produces no known block at all', () => {
+  const prompt = systemPrompt(undefined, 'en', [], []);
+  assert.doesNotMatch(prompt, /Do not ask about anything on that list/);
 });
 
 test('the plan prompt lists candidate ids and never asks for URLs', () => {

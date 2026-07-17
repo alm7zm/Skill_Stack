@@ -4,6 +4,7 @@ import { getDictionary } from '../../../dictionaries';
 import { isLocale } from '@/lib/i18n';
 import { getPlan } from '@/lib/data/queries';
 import { getResourcesByIds } from '@/lib/data/resources';
+import type { LearningResource } from '@/lib/types';
 import { formatDate, formatNumber, interpolate, pluralUnit } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { toggleTopic } from './actions';
@@ -25,6 +26,16 @@ export default async function PlanPage({
   const t = dict.plan;
   const weeks = plan.row.plan?.weeks ?? [];
   const doneIds = new Set(plan.topics.filter((x) => x.completed).map((x) => x.topic_id));
+
+  // One query for the whole plan, not one per week. Resources moved to the
+  // database, so a lookup inside the weeks.map() below would be a query per week
+  // — the same N+1 the dashboard and home page already had to have fixed out.
+  const resourceById = new Map(
+    (await getResourcesByIds([...new Set(weeks.flatMap((w) => w.resourceIds ?? []))])).map((r) => [
+      r.id,
+      r,
+    ])
+  );
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-10">
@@ -144,7 +155,12 @@ export default async function PlanPage({
               })}
             </ul>
 
-            <WeekResources ids={week.resourceIds ?? []} labels={{ title: t.resources, free: dict.common.free, paid: t.paid }} />
+            <WeekResources
+              resources={(week.resourceIds ?? [])
+                .map((id) => resourceById.get(id))
+                .filter((r) => r !== undefined)}
+              labels={{ title: t.resources, free: dict.common.free, paid: t.paid }}
+            />
           </Card>
         ))}
       </div>
@@ -153,20 +169,19 @@ export default async function PlanPage({
 }
 
 /**
- * The week's reading, resolved from ids the advisor picked.
+ * The week's reading, already resolved by the page.
  *
  * Renders nothing at all when there are none — 16 of the 28 certifications have
  * no curated resources, and an empty "Resources" heading on every week would be
  * a promise the catalog cannot keep.
  */
 function WeekResources({
-  ids,
+  resources,
   labels,
 }: {
-  ids: string[];
+  resources: LearningResource[];
   labels: { title: string; free: string; paid: string };
 }) {
-  const resources = getResourcesByIds(ids);
   if (resources.length === 0) return null;
 
   return (

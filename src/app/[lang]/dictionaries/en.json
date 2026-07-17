@@ -318,7 +318,9 @@
       "title": "What I already know",
       "body": "Taken from your profile — I won't ask about these again.",
       "edit": "Change it",
-      "freeOnly": "Free resources only"
+      "freeOnly": "Free resources only",
+      "skills": "Skills",
+      "languages": "Exam languages"
     }
   },
   "plan": {
@@ -344,15 +346,31 @@
     "careerGoal": "Career goal",
     "jobRole": "Current role",
     "experienceLevel": "Experience",
-    "budget": "Budget for learning",
+    "budget": "Budget for study materials",
     "dailyStudyTime": "Hours per day",
     "weeklyAvailability": "Days per week",
-    "skills": "Skills",
-    "languages": "Languages",
-    "addSkill": "Add a skill",
-    "addLanguage": "Add a language",
+    "skills": "Skills you already have",
+    "languages": "Languages you can take an exam in",
+    "addSkill": "e.g. Linux",
+    "addLanguage": "e.g. Arabic",
     "remove": "Remove",
-    "updated": "Profile updated."
+    "updated": "Profile updated.",
+    "lede": "The advisor reads this before it asks you anything. Whatever is filled in here, it will not ask about again — so the more of it is honest, the shorter the conversation and the better the plan fits.",
+    "sectionAbout": "About you",
+    "sectionTime": "Time and money",
+    "jobRolePlaceholder": "IT support technician",
+    "jobRoleHint": "What you do now. The advisor uses it to judge how big a jump a certification is for you.",
+    "careerGoalPlaceholder": "Move into a cloud engineering role",
+    "careerGoalHint": "Where you want to end up. Be specific — \"a better job\" gives the advisor nothing to reason with.",
+    "experienceLevelHint": "Roughly where you are across IT in general, not with one product.",
+    "dailyStudyTimeHint": "On a day you actually study. Half hours are fine (1.5). Your plan is paced to this number, so an optimistic one buys you a plan you will miss.",
+    "weeklyAvailabilityHint": "0 to 7. Days you will realistically open a book, not days you intend to.",
+    "budgetHint": "US dollars, for courses, books and practice exams. Not the exam fee itself — that is listed on each certification. Enter 0 and you will only ever be shown free resources.",
+    "budgetSuffix": "USD",
+    "skillsHint": "Things you can already do — Linux, Python, networking, Docker. The advisor spends less time on what you already know.",
+    "languagesHint": "Spoken languages, not programming ones. Not every certification is offered in every language, and the advisor will tell you when this one is not.",
+    "optional": "Optional",
+    "empty": "Nothing added yet"
   },
   "settings": {
     "title": "Settings",

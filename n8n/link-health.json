@@ -1,0 +1,309 @@
+{
+  "name": "SkillStack — link health",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "weeksInterval": 1,
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 3
+            }
+          ]
+        }
+      },
+      "id": "3f1a6d20-0001-4a00-9000-000000000001",
+      "name": "Every Monday 03:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "certification_resources",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "dead",
+              "condition": "eq",
+              "keyValue": "false"
+            }
+          ]
+        }
+      },
+      "id": "3f1a6d20-0001-4a00-9000-000000000002",
+      "name": "Get live resources",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        20,
+        0
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL_ID",
+          "name": "SkillStack Supabase (service_role)"
+        }
+      },
+      "notes": "Live resources only. Already-dead rows are skipped: they were checked, they failed, and re-fetching them weekly costs requests to tell us what we know. A human replacing the URL is what brings a row back."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fetch every URL and report what came back. No judgement here on\n// purpose: a status code is a fact, and this node is allowed to write\n// facts straight to the table. Anything needing an opinion goes to the\n// review queue instead.\n\nconst results = [];\n\nfor (const item of $input.all()) {\n  const { id, certification_id, url } = item.json;\n\n  let status = 0;\n  let error = null;\n\n  try {\n    // GET, not HEAD: plenty of course platforms answer 405 or 404 to a\n    // HEAD while serving the page fine on GET. A HEAD-based checker\n    // reports healthy links as dead, which is worse than not checking.\n    const res = await this.helpers.httpRequest({\n      method: 'GET',\n      url,\n      returnFullResponse: true,\n      ignoreHttpStatusErrors: true,\n      followRedirect: true,\n      timeout: 20000,\n      headers: {\n        // Cloudflare and friends serve 403 to anything that looks\n        // scripted, which would read as a dead link on a fine page.\n        'user-agent':\n          'Mozilla/5.0 (compatible; SkillStackBot/1.0; +https://github.com/alm7zm/Skill_Stack)',\n        accept: 'text/html,application/xhtml+xml',\n      },\n    });\n    status = res.statusCode;\n  } catch (e) {\n    // DNS failure, TLS failure, timeout. Not an HTTP status at all.\n    error = String(e.message ?? e).slice(0, 200);\n  }\n\n  // Only 404/410 mean gone. 401/403 are NOT dead — paywalled and\n  // login-walled resources are still real, and many legitimately refuse\n  // a bot. 5xx is the site having a bad day: retry next week rather than\n  // hide someone's course. 0 means we never reached it at all, which is\n  // as likely to be our network as their server.\n  const gone = status === 404 || status === 410;\n\n  results.push({\n    json: {\n      resource_id: id,\n      certification_id,\n      url,\n      http_status: status,\n      error,\n      gone,\n      checked_at: new Date().toISOString(),\n    },\n  });\n}\n\nreturn results;"
+      },
+      "id": "3f1a6d20-0001-4a00-9000-000000000003",
+      "name": "Check each URL",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "gone-check",
+              "leftValue": "={{ $json.gone }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "3f1a6d20-0001-4a00-9000-000000000004",
+      "name": "Gone?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        460,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "certification_resources",
+        "filterType": "string",
+        "filterString": "=id=eq.{{ $json.resource_id }}",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "dead",
+              "fieldValue": "=true"
+            },
+            {
+              "fieldId": "http_status",
+              "fieldValue": "={{ $json.http_status }}"
+            },
+            {
+              "fieldId": "last_checked_at",
+              "fieldValue": "={{ $json.checked_at }}"
+            }
+          ]
+        }
+      },
+      "id": "3f1a6d20-0001-4a00-9000-000000000005",
+      "name": "Mark dead",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        700,
+        -100
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL_ID",
+          "name": "SkillStack Supabase (service_role)"
+        }
+      },
+      "notes": "Sets dead + http_status. The row is kept, never deleted: study_plans reference resources by id, so deleting one would break every plan that already links to it."
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "certification_reports",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "certification_id",
+              "fieldValue": "={{ $json.certification_id }}"
+            },
+            {
+              "fieldId": "resource_id",
+              "fieldValue": "={{ $json.resource_id }}"
+            },
+            {
+              "fieldId": "source",
+              "fieldValue": "n8n"
+            },
+            {
+              "fieldId": "field",
+              "fieldValue": "resource_dead"
+            },
+            {
+              "fieldId": "message",
+              "fieldValue": "={{ $json.url }} returned {{ $json.http_status }}{{ $json.error ? ' (' + $json.error + ')' : '' }}. Hidden from the catalog until a replacement is found."
+            },
+            {
+              "fieldId": "confidence",
+              "fieldValue": "=1"
+            },
+            {
+              "fieldId": "proposal",
+              "fieldValue": "={{ JSON.stringify({ url: $json.url, http_status: $json.http_status, checked_at: $json.checked_at }) }}"
+            }
+          ]
+        }
+      },
+      "id": "3f1a6d20-0001-4a00-9000-000000000006",
+      "name": "Log it for a human",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        920,
+        -100
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL_ID",
+          "name": "SkillStack Supabase (service_role)"
+        }
+      },
+      "notes": "The row is already hidden by this point. This is the trail, so a dead link is something someone can go replace rather than something that silently vanished."
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "certification_resources",
+        "filterType": "string",
+        "filterString": "=id=eq.{{ $json.resource_id }}",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "dead",
+              "fieldValue": "=false"
+            },
+            {
+              "fieldId": "http_status",
+              "fieldValue": "={{ $json.http_status }}"
+            },
+            {
+              "fieldId": "last_checked_at",
+              "fieldValue": "={{ $json.checked_at }}"
+            }
+          ]
+        }
+      },
+      "id": "3f1a6d20-0001-4a00-9000-000000000007",
+      "name": "Record healthy check",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        700,
+        120
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL_ID",
+          "name": "SkillStack Supabase (service_role)"
+        }
+      },
+      "notes": "Writes http_status only. Note this also un-deads a link that came back: a 404 that turns into a 200 next week means the provider moved it back, and it should return to the catalog on its own."
+    }
+  ],
+  "connections": {
+    "Every Monday 03:00": {
+      "main": [
+        [
+          {
+            "node": "Get live resources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check each URL": {
+      "main": [
+        [
+          {
+            "node": "Gone?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gone?": {
+      "main": [
+        [
+          {
+            "node": "Mark dead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Record healthy check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark dead": {
+      "main": [
+        [
+          {
+            "node": "Log it for a human",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get live resources": {
+      "main": [
+        [
+          {
+            "node": "Check each URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
