@@ -88,7 +88,9 @@ export default async function LandingPage({ params }: { params: Promise<{ lang: 
                 alt=""
                 width={528}
                 height={316}
-                priority
+                // Decorative (opacity 0.07, hidden on mobile) — must not preload
+                // and steal fetch priority from the hero, which is the real LCP.
+                loading="lazy"
                 className="absolute -end-16 top-2 w-[130%] max-w-none opacity-[0.07]"
               />
             </div>

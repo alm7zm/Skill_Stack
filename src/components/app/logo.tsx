@@ -33,7 +33,10 @@ export function Logo({
         alt=""
         width={528}
         height={316}
-        priority
+        // eager, not priority: it's above the fold so it should load promptly,
+        // but it's never the LCP, so it must not inject a high-priority preload
+        // that competes with each page's real largest element.
+        loading="eager"
         className={cn('w-auto', marks[size])}
       />
       {showWordmark && (

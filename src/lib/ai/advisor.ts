@@ -83,7 +83,10 @@ export const planSchema = z.object({
         ),
       })
     )
-    .min(1),
+    // 1 week floor, 104-week (2-year) ceiling. A learner with very little time
+    // per week can still get a valid long plan; the cap stops a runaway.
+    .min(1)
+    .max(104),
 });
 
 export type GeneratedPlan = z.infer<typeof planSchema>;
@@ -298,6 +301,7 @@ export function planPrompt(
     'Pace it to the hours per day the user actually stated, not to an ideal schedule.',
     intensityLine,
     'Total the weekly hours to roughly the certification\'s typical study time.',
+    'The plan must be between 1 and 104 weeks (1 week to 2 years). Fit the number of weeks to the time they can give: someone with little time per week may need many weeks, up to the 2-year cap — never exceed it, and never pad a plan that could be shorter.',
     'Include at least one review week and at least one practice exam before the target date.',
     'Set recommended=false if the conversation showed this is a poor fit.',
     cert ? `Certification: ${cert.name} — typical study time ${cert.estimatedStudyHours} hours.` : '',
@@ -307,10 +311,10 @@ export function planPrompt(
           'Attach resources to each week by putting their ids in that week\'s resourceIds.',
           'Rules for resourceIds:',
           '- Use only ids from the list below. Never write a URL, a title, or an id that is not listed.',
-          '- One to three per week, ordered best first. Prefer the ones that match what that week covers.',
+          '- One to three per week, best first. Include a resource ONLY if its subject matches THIS week\'s specific topics. A resource that merely relates to the certification in general does not belong in a week whose topics it does not cover.',
           '- Match the type to the week: documentation and courses while learning, practice-exam ids only in a practice or review week.',
-          '- Reusing an id across weeks is fine when the resource genuinely spans them.',
-          '- If nothing on the list fits a week, leave resourceIds empty rather than forcing one in.',
+          '- Do not spray one broad, whole-course resource across every week. Put it in the earliest week whose topics it covers, and only reuse it in a later week that genuinely revisits the same material.',
+          '- If nothing on the list fits a week\'s topics, leave resourceIds empty rather than forcing one in.',
           ...preferenceLines,
           '',
           // Site is shown so the model can honour a platform preference; it is
@@ -339,7 +343,7 @@ export function planPrompt(
  * ------------------------------------------------------------------------ */
 
 const MAX_MESSAGES = 40;
-const MAX_CHARS = 4000;
+export const MAX_CHARS = 4000;
 
 export const chatRequestSchema = z.object({
   certId: z.string().min(1).max(100),

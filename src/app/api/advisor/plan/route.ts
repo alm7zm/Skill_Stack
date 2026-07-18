@@ -34,9 +34,19 @@ export async function POST(req: Request) {
   }
 
   // Plan generation is the pricier call, so a tighter cap than the chat.
-  const limit = await rateLimit(user.id, 'plan', 5);
-  if (!limit.ok) {
-    return Response.json({ error: 'rate_limited', retryAfter: limit.retryAfter }, { status: 429 });
+  const rl = await rateLimit(user.id, 'plan', 5);
+  if (!rl.ok) {
+    return Response.json(
+      { error: 'rate_limited', retryAfter: rl.retryAfter },
+      {
+        status: 429,
+        headers: {
+          'X-RateLimit-Limit': String(rl.limit),
+          'X-RateLimit-Remaining': String(rl.remaining),
+          'Retry-After': String(rl.retryAfter),
+        },
+      }
+    );
   }
 
   let body: unknown;

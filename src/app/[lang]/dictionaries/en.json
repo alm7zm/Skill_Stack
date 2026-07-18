@@ -313,6 +313,8 @@
       "message": "The advisor has hit its daily limit with Google.",
       "retry": "Try again in {seconds}s."
     },
+    "charCount": "Characters",
+    "messagesLeft": "{n} messages left",
     "openingKnown": "I have your profile, so I won't ask about that again. Why this certification in particular?",
     "known": {
       "title": "What I already know",

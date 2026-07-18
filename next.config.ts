@@ -8,6 +8,11 @@ import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
+  // Serve AVIF first (smaller than WebP), falling back to WebP then the source.
+  // Only affects images that go through the next/image optimizer — the remote
+  // Google avatars are `unoptimized` and unaffected.
+  images: { formats: ['image/avif', 'image/webp'] },
+
   // Next otherwise infers the workspace root as the user's home directory,
   // because a stray package-lock.json sits there and lockfiles are what it
   // probes for. That makes it watch and resolve from the wrong tree.

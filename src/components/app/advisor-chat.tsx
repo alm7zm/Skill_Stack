@@ -18,10 +18,13 @@ type Message = { role: 'user' | 'assistant'; content: string };
 export function AdvisorChat({
   certId,
   lang,
+  maxChars,
   labels,
 }: {
   certId: string;
   lang: Locale;
+  /** Server-enforced per-message character cap; shown as a live counter. */
+  maxChars: number;
   labels: {
     placeholder: string;
     send: string;
@@ -32,6 +35,9 @@ export function AdvisorChat({
     opening: string;
     status: { thinking: string; drafting: string; saving: string; done: string };
     quota: { message: string; retry: string };
+    charCount: string;
+    /** Template with {n}, e.g. "{n} messages left". */
+    messagesLeft: string;
   };
 }) {
   const router = useRouter();
@@ -45,6 +51,8 @@ export function AdvisorChat({
   const [error, setError] = useState<string>();
   /** Seconds left on a quota cooldown. Counts down so the wait is a fact, not a shrug. */
   const [retryIn, setRetryIn] = useState(0);
+  /** Messages left in the current rate-limit window, from X-RateLimit-Remaining. */
+  const [callsLeft, setCallsLeft] = useState<number | null>(null);
   const [restored, setRestored] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -146,6 +154,10 @@ export function AdvisorChat({
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ certId, locale: lang, messages: next }),
       });
+
+      // Both 200 and 429 carry the remaining-messages count.
+      const remaining = res.headers.get('X-RateLimit-Remaining');
+      if (remaining !== null) setCallsLeft(Number(remaining));
 
       if (!res.ok || !res.body) {
         // Keep the user's message — losing what they typed on a failure is worse
@@ -270,12 +282,23 @@ export function AdvisorChat({
             onChange={(e) => setInput(e.target.value)}
             placeholder={labels.placeholder}
             disabled={busy || blocked}
+            maxLength={maxChars}
             aria-label={labels.placeholder}
             className="h-11 flex-1 rounded-md border border-rule bg-paper-raised px-3 text-sm text-ink placeholder:text-ink-faint hover:border-rule-strong disabled:opacity-60"
           />
           <Button type="submit" disabled={busy || blocked || !input.trim()}>
             {blocked ? `${retryIn}s` : labels.send}
           </Button>
+        </div>
+
+        {/* Two live limits: how much of the message budget is used, and how many
+            messages remain in the rate-limit window (shown once the first reply
+            reports it). tabular-nums so the digits don't jitter as they change. */}
+        <div className="tabular mt-1.5 flex items-center justify-between px-1 text-xs text-ink-faint">
+          <span title={labels.charCount} className={input.length >= maxChars ? 'text-danger' : undefined}>
+            {input.length}/{maxChars}
+          </span>
+          {callsLeft !== null && <span>{interpolate(labels.messagesLeft, { n: String(callsLeft) })}</span>}
         </div>
 
         {canBuild && !blocked && (

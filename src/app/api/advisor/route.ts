@@ -29,10 +29,18 @@ export async function POST(req: Request) {
   }
 
   // Then a per-user cap, so one account can't run up the bill. 429 + retryAfter
-  // is the shape the chat client already renders as the quota notice.
-  const limit = await rateLimit(user.id, 'advisor', 15);
-  if (!limit.ok) {
-    return Response.json({ error: 'rate_limited', retryAfter: limit.retryAfter }, { status: 429 });
+  // is the shape the chat client already renders as the quota notice. The
+  // X-RateLimit-* headers feed the "messages left" indicator.
+  const rl = await rateLimit(user.id, 'advisor', 15);
+  const rlHeaders = {
+    'X-RateLimit-Limit': String(rl.limit),
+    'X-RateLimit-Remaining': String(rl.remaining),
+  };
+  if (!rl.ok) {
+    return Response.json(
+      { error: 'rate_limited', retryAfter: rl.retryAfter },
+      { status: 429, headers: { ...rlHeaders, 'Retry-After': String(rl.retryAfter) } }
+    );
   }
 
   let body: unknown;
@@ -117,6 +125,6 @@ export async function POST(req: Request) {
   });
 
   return new Response(stream, {
-    headers: { 'content-type': 'text/plain; charset=utf-8' },
+    headers: { 'content-type': 'text/plain; charset=utf-8', ...rlHeaders },
   });
 }

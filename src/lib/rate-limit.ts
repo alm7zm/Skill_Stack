@@ -17,7 +17,7 @@ export async function rateLimit(
   action: string,
   limit: number,
   windowSeconds = 60
-): Promise<{ ok: boolean; retryAfter: number }> {
+): Promise<{ ok: boolean; retryAfter: number; remaining: number; limit: number }> {
   const admin = createAdminClient();
   const since = new Date(Date.now() - windowSeconds * 1000).toISOString();
 
@@ -32,8 +32,9 @@ export async function rateLimit(
   // not an auth boundary — bricking the advisor because the limiter hiccuped is
   // worse than the occasional over-limit call. The limit still holds whenever
   // the count succeeds.
-  if (error) return { ok: true, retryAfter: 0 };
-  if ((count ?? 0) >= limit) return { ok: false, retryAfter: windowSeconds };
+  if (error) return { ok: true, retryAfter: 0, remaining: limit, limit };
+  const used = count ?? 0;
+  if (used >= limit) return { ok: false, retryAfter: windowSeconds, remaining: 0, limit };
 
   await admin.from('llm_calls').insert({ user_id: userId, action });
   // Opportunistic prune keeps the table bounded without a cron; only touches
@@ -45,5 +46,6 @@ export async function rateLimit(
     .eq('action', action)
     .lt('created_at', since);
 
-  return { ok: true, retryAfter: 0 };
+  // remaining counts this call as spent.
+  return { ok: true, retryAfter: 0, remaining: Math.max(0, limit - used - 1), limit };
 }
