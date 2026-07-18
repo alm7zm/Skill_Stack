@@ -21,6 +21,18 @@ import { Badge } from '@/components/ui/badge';
 import { DifficultyMeter } from '@/components/ui/difficulty-meter';
 import { ButtonLink } from '@/components/ui/button';
 import { ReportButton } from '@/components/app/report-button';
+import type { LearningResource } from '@/lib/types';
+
+// Curated types first, the (now large) YouTube video pile last, so the handful of
+// official docs/courses is not buried under 20 playlists. cn is inlined below to
+// avoid an import for one conditional class.
+const RESOURCE_TYPE_ORDER: LearningResource['type'][] = [
+  'course',
+  'documentation',
+  'practice-exam',
+  'book',
+  'video',
+];
 
 /**
  * Rendered per request, and deliberately not prerendered.
@@ -90,6 +102,15 @@ export default async function CertificationPage({
     },
     { label: t.provider, value: cert.provider },
   ];
+
+  // Grouped by type so the list is scannable instead of one long wall, and so the
+  // curated docs/courses sit above the large pile of seeded video playlists.
+  const anyPaid = resources.some((r) => !r.free);
+  const resourceGroups = RESOURCE_TYPE_ORDER.map((type) => ({
+    type,
+    items: resources.filter((r) => r.type === type),
+  })).filter((g) => g.items.length > 0);
+  const showGroupLabels = resourceGroups.length > 1;
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-10">
@@ -206,35 +227,52 @@ export default async function CertificationPage({
 
           <section className="mt-10">
             <h2 className="font-display text-xl font-semibold text-ink">{t.resources}</h2>
-            <ul className="mt-4 flex flex-col gap-2">
-              {resources.map((r) => {
-                // Site is derived from the url, not stored. Shown only when it is
-                // a platform we recognise; unknown hosts just don't get a tag.
-                const site = siteOf(r.url);
-                return (
-                  <li key={r.id}>
-                    <a
-                      href={r.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-between gap-4 rounded-md border border-rule bg-paper-raised px-4 py-3 transition-colors hover:border-rule-strong"
-                    >
-                      <span>
-                        <span className="block text-sm font-medium text-ink">{r.title}</span>
-                        <span className="block text-xs text-ink-faint">
-                          {r.provider} · {r.duration}
-                          {site ? ` · ${site}` : ''}
-                        </span>
-                      </span>
-                      {r.free && <Badge tone="accent">{dict.common.free}</Badge>}
-                    </a>
-                  </li>
-                );
-              })}
-              {resources.length === 0 && (
-                <li className="text-sm text-ink-faint">—</li>
-              )}
-            </ul>
+            {resourceGroups.length === 0 ? (
+              <p className="mt-3 text-sm text-ink-faint">—</p>
+            ) : (
+              <div className="mt-4 flex flex-col gap-6">
+                {resourceGroups.map(({ type, items }) => (
+                  <div key={type}>
+                    {/* One "Videos" header over the whole list would be noise, so
+                        labels appear only once the resources span more than one type. */}
+                    {showGroupLabels && (
+                      <h3 className="flex items-baseline gap-2 text-xs font-medium uppercase tracking-wider text-ink-faint">
+                        {t.resourceTypes[type]}
+                        <span className="tabular text-ink-faint/70">{items.length}</span>
+                      </h3>
+                    )}
+                    <ul className={`flex flex-col gap-2${showGroupLabels ? ' mt-2.5' : ''}`}>
+                      {items.map((r) => {
+                        // Site is derived from the url, not stored. Shown only when
+                        // it is a platform we recognise; unknown hosts get no tag.
+                        const site = siteOf(r.url);
+                        return (
+                          <li key={r.id}>
+                            <a
+                              href={r.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center justify-between gap-4 rounded-md border border-rule bg-paper-raised px-4 py-3 transition-colors hover:border-rule-strong"
+                            >
+                              <span>
+                                <span className="block text-sm font-medium text-ink">{r.title}</span>
+                                <span className="block text-xs text-ink-faint">
+                                  {r.provider} · {r.duration}
+                                  {site ? ` · ${site}` : ''}
+                                </span>
+                              </span>
+                              {/* A "Free" badge on every row informs nothing — show it
+                                  only when some resource is paid and this one isn't. */}
+                              {anyPaid && r.free && <Badge tone="accent">{dict.common.free}</Badge>}
+                            </a>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
         </div>
 

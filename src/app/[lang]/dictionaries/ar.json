@@ -260,6 +260,13 @@
     "careers": "إلى أين تقودك",
     "salary": "الراتب المعتاد",
     "resources": "المصادر",
+    "resourceTypes": {
+      "course": "الدورات",
+      "documentation": "الوثائق",
+      "practice-exam": "اختبارات تجريبية",
+      "book": "الكتب",
+      "video": "الفيديوهات"
+    },
     "prerequisites": "قبل أن تبدأ",
     "noPrerequisites": "لا متطلبات رسمية.",
     "startPlan": "خطِّط لهذه الشهادة",

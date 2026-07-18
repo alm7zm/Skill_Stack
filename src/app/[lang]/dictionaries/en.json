@@ -260,6 +260,13 @@
     "careers": "Where it leads",
     "salary": "Typical salary",
     "resources": "Resources",
+    "resourceTypes": {
+      "course": "Courses",
+      "documentation": "Documentation",
+      "practice-exam": "Practice exams",
+      "book": "Books",
+      "video": "Videos"
+    },
     "prerequisites": "Before you start",
     "noPrerequisites": "No formal prerequisites.",
     "startPlan": "Plan this certification",

@@ -42,6 +42,21 @@ if (!SUPA || !KEY) { console.error('Missing Supabase env.'); process.exit(1); }
 const H = { apikey: KEY, Authorization: `Bearer ${KEY}`, 'content-type': 'application/json' };
 const rest = (p) => `${SUPA}/rest/v1/${p}`;
 
+// YouTube returns HTML-encoded titles ("AWS AI &amp; ML", "Beginner&#39;s"), and
+// storing them raw prints the entity literally. Decode &amp; first so a double
+// encoding like &amp;#39; collapses to &#39; and then to a quote.
+function decodeEntities(s) {
+  if (!s || !s.includes('&')) return s;
+  return s
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d)));
+}
+
 async function main() {
   const certs = await (await fetch(rest('certifications?select=id,name,short_name&order=id'), { headers: H })).json();
   const existing = await (await fetch(rest('certification_resources?select=id,url,certification_id&limit=5000'), { headers: H })).json();
@@ -76,11 +91,11 @@ async function main() {
       const id = `yt-${pid}`;
       const link = `https://www.youtube.com/playlist?list=${pid}`;
       if (knownIds.has(id) || knownUrls.has(link)) continue; // dedup across certs + reruns
-      const channel = item.snippet?.channelTitle ?? 'YouTube';
+      const channel = decodeEntities(item.snippet?.channelTitle ?? 'YouTube');
       rows.push({
         id,
         certification_id: c.id,
-        title: (item.snippet?.title ?? 'Playlist').slice(0, 300),
+        title: decodeEntities(item.snippet?.title ?? 'Playlist').slice(0, 300),
         provider: channel.slice(0, 120),
         url: link,
         duration: 'Playlist',
