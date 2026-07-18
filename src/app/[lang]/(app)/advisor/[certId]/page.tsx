@@ -108,10 +108,11 @@ function summarise(
     job_role?: string | null;
     experience_level?: string | null;
     budget?: number | null;
+    budget_currency?: string | null;
     daily_study_time?: number | null;
     weekly_availability?: number | null;
   } | null,
-  skills: string[],
+  skills: { name: string; level: string | null }[],
   languages: string[],
   lang: Locale,
   dict: Dict
@@ -156,13 +157,22 @@ function summarise(
       t.budget,
       profile.budget === 0
         ? dict.advisor.known.freeOnly
-        : formatCurrency(profile.budget, lang, 'USD')
+        : formatCurrency(profile.budget, lang, profile.budget_currency ?? 'USD')
     );
   }
 
   // Shown because the advisor now reads them. Until this commit both lists were
   // collected and never used by anything.
-  if (skills.length > 0) push(dict.advisor.known.skills, skills.join(', '));
+  if (skills.length > 0) {
+    const list = skills
+      .map((s) =>
+        s.level && s.level in dict.difficulty
+          ? `${s.name} (${dict.difficulty[s.level as keyof Dict['difficulty']]})`
+          : s.name
+      )
+      .join(', ');
+    push(dict.advisor.known.skills, list);
+  }
   if (languages.length > 0) push(dict.advisor.known.languages, languages.join(', '));
 
   return facts;

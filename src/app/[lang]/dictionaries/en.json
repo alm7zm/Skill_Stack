@@ -367,6 +367,7 @@
     "weeklyAvailabilityHint": "0 to 7. Days you will realistically open a book, not days you intend to.",
     "budgetHint": "US dollars, for courses, books and practice exams. Not the exam fee itself — that is listed on each certification. Enter 0 and you will only ever be shown free resources.",
     "budgetSuffix": "USD",
+    "budgetCurrency": "Currency",
     "sectionPreferences": "Learning preferences",
     "preferredFormats": "Preferred formats",
     "preferredFormatsHint": "The kinds of resource you learn best from. The advisor leans toward these when it builds your plan — it won't refuse a great resource in another format, it just prefers yours when it can.",
@@ -379,13 +380,26 @@
       "practice-exam": "Practice exam",
       "book": "Book"
     },
-    "skillsHint": "Things you can already do — Linux, Python, networking, Docker. The advisor spends less time on what you already know.",
+    "skillsHint": "Things you can already do — Linux, Python, networking, Docker. Set a level so the advisor knows how deep you are, and spends less time on what you already know.",
+    "skillLevel": "Level",
     "languagesHint": "Spoken languages, not programming ones. Not every certification is offered in every language, and the advisor will tell you when this one is not.",
     "optional": "Optional",
     "empty": "Nothing added yet"
   },
   "settings": {
     "title": "Settings",
+    "advisor": {
+      "title": "Advisor",
+      "body": "How the advisor talks to you and paces your plans. It stays honest at every setting — this only changes the delivery.",
+      "tone": "Tone",
+      "toneOptions": { "direct": "Direct", "balanced": "Balanced", "warm": "Warm" },
+      "length": "Reply length",
+      "lengthOptions": { "brief": "Brief", "balanced": "Balanced", "detailed": "Detailed" },
+      "questions": "Questions it asks",
+      "questionsOptions": { "few": "Few", "balanced": "Balanced", "thorough": "Thorough" },
+      "intensity": "Plan intensity",
+      "intensityOptions": { "relaxed": "Relaxed", "balanced": "Balanced", "intense": "Intense" }
+    },
     "language": "Language",
     "languageBody": "Changes the interface and the advisor's replies.",
     "calendar": "Google Calendar",
@@ -398,6 +412,22 @@
     "dangerZone": "Delete account",
     "dangerBody": "Removes your profile, plans and progress. This can't be undone.",
     "delete": "Delete my account"
+  },
+  "languageNames": {
+    "English": "English",
+    "Arabic": "Arabic",
+    "French": "French",
+    "German": "German",
+    "Spanish": "Spanish",
+    "Portuguese": "Portuguese",
+    "Italian": "Italian",
+    "Japanese": "Japanese",
+    "Korean": "Korean",
+    "Chinese": "Chinese",
+    "Russian": "Russian",
+    "Hindi": "Hindi",
+    "Turkish": "Turkish",
+    "Dutch": "Dutch"
   },
   "categories": {
     "cloud": "Cloud",

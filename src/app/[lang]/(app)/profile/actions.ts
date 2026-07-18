@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { createClient, getUser } from '@/lib/supabase/server';
 import { RESOURCE_FORMATS, RESOURCE_SITES } from '@/lib/resource-prefs';
+import { EXAM_LANGUAGES } from '@/lib/languages';
+import { CURRENCIES } from '@/lib/currencies';
 
 /**
  * Server actions. Validation runs here because this is the trust boundary —
@@ -17,6 +19,9 @@ const profileSchema = z.object({
   experience_level: z.enum(['beginner', 'intermediate', 'advanced', 'expert']).nullable(),
   // Coerced because FormData values are always strings.
   budget: z.coerce.number().min(0).max(1_000_000).nullable(),
+  // .catch keeps a bad or missing currency from failing the whole save; it just
+  // falls back to USD.
+  budget_currency: z.enum(CURRENCIES).catch('USD'),
   daily_study_time: z.coerce.number().min(0).max(24).nullable(),
   weekly_availability: z.coerce.number().min(0).max(7).nullable(),
   // Closed vocabularies from the shared list. Anything off-list fails the parse
@@ -41,6 +46,7 @@ export async function updateProfile(formData: FormData) {
     job_role: emptyToNull(formData.get('job_role')),
     experience_level: emptyToNull(formData.get('experience_level')),
     budget: emptyToNull(formData.get('budget')),
+    budget_currency: formData.get('budget_currency'),
     daily_study_time: emptyToNull(formData.get('daily_study_time')),
     weekly_availability: emptyToNull(formData.get('weekly_availability')),
     // Checkbox groups: getAll returns every checked value, or [] if none.
@@ -61,6 +67,8 @@ export async function updateProfile(formData: FormData) {
 
 const tagSchema = z.string().trim().min(1).max(60);
 
+const skillLevelSchema = z.enum(['beginner', 'intermediate', 'advanced']);
+
 export async function addSkill(formData: FormData) {
   const user = await getUser();
   if (!user) throw new Error('Not signed in');
@@ -68,11 +76,18 @@ export async function addSkill(formData: FormData) {
   const parsed = tagSchema.safeParse(formData.get('skill_name'));
   if (!parsed.success) return;
 
+  const level = skillLevelSchema.safeParse(formData.get('skill_level'));
+
   const supabase = await createClient();
-  // Ignores duplicates rather than erroring — unique(user_id, skill_name).
+  // upsert on (user_id, skill_name): re-adding an existing skill updates its
+  // level rather than erroring, which is also how you set a level on a skill
+  // that predates the level column.
   await supabase
     .from('user_skills')
-    .upsert({ user_id: user.id, skill_name: parsed.data }, { onConflict: 'user_id,skill_name' });
+    .upsert(
+      { user_id: user.id, skill_name: parsed.data, level: level.success ? level.data : null },
+      { onConflict: 'user_id,skill_name' }
+    );
 
   revalidatePath('/[lang]/profile', 'page');
 }
@@ -94,7 +109,9 @@ export async function addLanguage(formData: FormData) {
   const user = await getUser();
   if (!user) throw new Error('Not signed in');
 
-  const parsed = tagSchema.safeParse(formData.get('language_name'));
+  // Restricted to the known exam languages, so a stored value is always one the
+  // catalog can match. The UI already limits it; this is the trust boundary.
+  const parsed = z.enum(EXAM_LANGUAGES).safeParse(formData.get('language_name'));
   if (!parsed.success) return;
 
   const supabase = await createClient();

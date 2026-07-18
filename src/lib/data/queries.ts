@@ -180,15 +180,21 @@ export type ProfileRow = {
   job_role: string | null;
   experience_level: string | null;
   budget: number | null;
+  budget_currency: string | null;
   daily_study_time: number | null;
   weekly_availability: number | null;
   preferred_resource_formats: string[];
   preferred_resource_sites: string[];
+  advisor_settings: Record<string, unknown> | null;
 };
+
+/** A skill and how well the user knows it. level is null for skills added before
+ * levels existed — the advisor omits it rather than guessing. */
+export type SkillWithLevel = { name: string; level: string | null };
 
 export async function getProfile(): Promise<{
   profile: ProfileRow | null;
-  skills: string[];
+  skills: SkillWithLevel[];
   languages: string[];
 }> {
   const supabase = await createClient();
@@ -197,16 +203,16 @@ export async function getProfile(): Promise<{
     supabase
       .from('profiles')
       .select(
-        'id, email, full_name, avatar_url, career_goal, job_role, experience_level, budget, daily_study_time, weekly_availability, preferred_resource_formats, preferred_resource_sites'
+        'id, email, full_name, avatar_url, career_goal, job_role, experience_level, budget, budget_currency, daily_study_time, weekly_availability, preferred_resource_formats, preferred_resource_sites, advisor_settings'
       )
       .maybeSingle(),
-    supabase.from('user_skills').select('skill_name'),
+    supabase.from('user_skills').select('skill_name, level'),
     supabase.from('user_languages').select('language_name'),
   ]);
 
   return {
     profile: (profile as ProfileRow) ?? null,
-    skills: (skills ?? []).map((s) => s.skill_name),
+    skills: (skills ?? []).map((s) => ({ name: s.skill_name, level: s.level ?? null })),
     languages: (languages ?? []).map((l) => l.language_name),
   };
 }

@@ -8,7 +8,12 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/app/avatar';
 import { RESOURCE_FORMATS, RESOURCE_SITES } from '@/lib/resource-prefs';
+import { EXAM_LANGUAGES } from '@/lib/languages';
+import { CURRENCIES } from '@/lib/currencies';
 import { addLanguage, addSkill, removeLanguage, removeSkill, updateProfile } from './actions';
+
+/** The three levels a skill can carry (labels come from dict.difficulty). */
+const SKILL_LEVELS = ['beginner', 'intermediate', 'advanced'] as const;
 
 /**
  * Server component + server actions, so the whole page works without client JS.
@@ -118,17 +123,24 @@ export default async function ProfilePage({ params }: { params: Promise<{ lang: 
             />
           </div>
 
-          <Row
-            label={t.budget}
-            name="budget"
-            hint={t.budgetHint}
-            type="number"
-            min="0"
-            step="1"
-            placeholder="0"
-            suffix={t.budgetSuffix}
-            defaultValue={profile?.budget?.toString() ?? ''}
-          />
+          <div className="grid gap-5 sm:grid-cols-[1fr_auto]">
+            <Row
+              label={t.budget}
+              name="budget"
+              hint={t.budgetHint}
+              type="number"
+              min="0"
+              step="1"
+              placeholder="0"
+              defaultValue={profile?.budget?.toString() ?? ''}
+            />
+            <Select
+              label={t.budgetCurrency}
+              name="budget_currency"
+              defaultValue={profile?.budget_currency ?? 'USD'}
+              options={CURRENCIES.map((c) => ({ value: c, label: c }))}
+            />
+          </div>
         </section>
 
         <section className="flex flex-col gap-5">
@@ -161,24 +173,41 @@ export default async function ProfilePage({ params }: { params: Promise<{ lang: 
         title={t.skills}
         hint={t.skillsHint}
         emptyLabel={t.empty}
-        items={skills}
+        items={skills.map((s) => ({
+          value: s.name,
+          label:
+            s.level && s.level in dict.difficulty
+              ? `${s.name} · ${dict.difficulty[s.level as keyof typeof dict.difficulty]}`
+              : s.name,
+        }))}
         name="skill_name"
         addLabel={t.addSkill}
         removeLabel={t.remove}
         addAction={addSkill}
         removeAction={removeSkill}
+        levelSelect={{
+          name: 'skill_level',
+          label: t.skillLevel,
+          options: SKILL_LEVELS.map((l) => ({ value: l, label: dict.difficulty[l] })),
+        }}
       />
 
       <TagSection
         title={t.languages}
         hint={t.languagesHint}
         emptyLabel={t.empty}
-        items={languages}
+        // Existing entries show localized when we recognise them; anything added
+        // before this became a fixed list falls back to its stored text.
+        items={languages.map((l) => ({
+          value: l,
+          label: dict.languageNames[l as keyof typeof dict.languageNames] ?? l,
+        }))}
         name="language_name"
         addLabel={t.addLanguage}
         removeLabel={t.remove}
         addAction={addLanguage}
         removeAction={removeLanguage}
+        selectOptions={EXAM_LANGUAGES.map((l) => ({ value: l, label: dict.languageNames[l] }))}
       />
     </div>
   );
@@ -201,14 +230,11 @@ function Row({
   label,
   name,
   hint,
-  suffix,
   ...props
 }: {
   label: string;
   name: string;
   hint?: string;
-  /** Unit rendered inside the field. For budget, where "150" alone is ambiguous. */
-  suffix?: string;
 } & React.InputHTMLAttributes<HTMLInputElement>) {
   const hintId = `${name}-hint`;
 
@@ -222,25 +248,13 @@ function Row({
           {hint}
         </p>
       )}
-      <div className="relative">
-        <input
-          id={name}
-          name={name}
-          aria-describedby={hint ? hintId : undefined}
-          className={`h-10 w-full rounded-md border border-rule bg-paper-raised px-3 text-sm text-ink placeholder:text-ink-faint hover:border-rule-strong ${
-            suffix ? 'pe-14' : ''
-          }`}
-          {...props}
-        />
-        {suffix && (
-          <span
-            aria-hidden="true"
-            className="pointer-events-none absolute end-3 top-0 flex h-10 items-center text-xs text-ink-faint"
-          >
-            {suffix}
-          </span>
-        )}
-      </div>
+      <input
+        id={name}
+        name={name}
+        aria-describedby={hint ? hintId : undefined}
+        className="h-10 w-full rounded-md border border-rule bg-paper-raised px-3 text-sm text-ink placeholder:text-ink-faint hover:border-rule-strong"
+        {...props}
+      />
     </div>
   );
 }
@@ -337,6 +351,13 @@ function Select({
   );
 }
 
+/**
+ * Both tag lists (skills, languages) share this chip layout. Two optional props
+ * cover where they differ: `datalist` gives the add-input native type-to-filter
+ * suggestions (languages), and `levelSelect` adds a second field to the add form
+ * (a skill's proficiency). Items carry a separate value/label so a skill can be
+ * removed by its bare name while displaying "Linux · Advanced".
+ */
 function TagSection({
   title,
   hint,
@@ -347,16 +368,23 @@ function TagSection({
   removeLabel,
   addAction,
   removeAction,
+  selectOptions,
+  levelSelect,
 }: {
   title: string;
   hint: string;
   emptyLabel: string;
-  items: string[];
+  items: { value: string; label: string }[];
   name: string;
   addLabel: string;
   removeLabel: string;
   addAction: (formData: FormData) => Promise<void>;
   removeAction: (formData: FormData) => Promise<void>;
+  /** When set, the add field is a restricted dropdown of these options rather
+   * than a free-text input — so only real values can be added, shown localized. */
+  selectOptions?: { value: string; label: string }[];
+  /** A second select in the add form, e.g. a skill's level. */
+  levelSelect?: { name: string; label: string; options: { value: string; label: string }[] };
 }) {
   const hintId = `${name}-hint`;
 
@@ -365,8 +393,8 @@ function TagSection({
       <h2 id={`${name}-heading`} className="font-display text-lg font-semibold text-ink">
         {title}
       </h2>
-      {/* These two lists were write-only until now: you could add to them and
-          nothing ever read them back. They feed the advisor, and the hint is
+      {/* These two lists were write-only until recently: you could add to them
+          and nothing ever read them back. They feed the advisor, and the hint is
           where that becomes visible rather than a thing you have to be told. */}
       <p id={hintId} className="prose-measure mt-1 text-xs leading-relaxed text-ink-faint">
         {hint}
@@ -375,14 +403,14 @@ function TagSection({
       <Card className="mt-3 p-4">
         <ul className="flex flex-wrap gap-2">
           {items.map((item) => (
-            <li key={item}>
+            <li key={item.value}>
               <form action={removeAction} className="contents">
-                <input type="hidden" name={name} value={item} />
+                <input type="hidden" name={name} value={item.value} />
                 <span className="inline-flex items-center gap-1.5 rounded-sm border border-rule bg-paper-sunken py-1 pe-1 ps-2.5 text-sm text-ink">
-                  {item}
+                  {item.label}
                   <button
                     type="submit"
-                    aria-label={`${removeLabel}: ${item}`}
+                    aria-label={`${removeLabel}: ${item.value}`}
                     className="rounded-xs p-0.5 text-ink-faint transition-colors hover:bg-danger-wash hover:text-danger"
                   >
                     <svg viewBox="0 0 12 12" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
@@ -398,18 +426,53 @@ function TagSection({
         </ul>
 
         <form action={addAction} className="mt-4 flex gap-2">
-          <input
-            name={name}
-            required
-            maxLength={60}
-            placeholder={addLabel}
-            // "e.g. Linux" is a placeholder, not a name — on its own a screen
-            // reader announces the example and never the question. The heading
-            // names it; the hint says what it is for.
-            aria-label={title}
-            aria-describedby={hintId}
-            className="h-9 flex-1 rounded-md border border-rule bg-paper-raised px-3 text-sm text-ink placeholder:text-ink-faint hover:border-rule-strong"
-          />
+          {selectOptions ? (
+            // Restricted: only a real, catalog-matchable value can be added, and
+            // the empty placeholder + required means you must pick one.
+            <select
+              name={name}
+              required
+              defaultValue=""
+              aria-label={title}
+              aria-describedby={hintId}
+              className="h-9 flex-1 rounded-md border border-rule bg-paper-raised px-3 text-sm text-ink hover:border-rule-strong"
+            >
+              <option value="" disabled>
+                {addLabel}
+              </option>
+              {selectOptions.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              name={name}
+              required
+              maxLength={60}
+              placeholder={addLabel}
+              // "e.g. Linux" is a placeholder, not a name — on its own a screen
+              // reader announces the example and never the question. The heading
+              // names it; the hint says what it is for.
+              aria-label={title}
+              aria-describedby={hintId}
+              className="h-9 flex-1 rounded-md border border-rule bg-paper-raised px-3 text-sm text-ink placeholder:text-ink-faint hover:border-rule-strong"
+            />
+          )}
+          {levelSelect && (
+            <select
+              name={levelSelect.name}
+              aria-label={levelSelect.label}
+              className="h-9 rounded-md border border-rule bg-paper-raised px-2 text-sm text-ink hover:border-rule-strong"
+            >
+              {levelSelect.options.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          )}
           <Button type="submit" variant="secondary" size="sm">
             +
           </Button>

@@ -2,6 +2,7 @@ import { streamText } from 'ai';
 import { getUser } from '@/lib/supabase/server';
 import { getAllCertifications, getCertificationById } from '@/lib/data/certifications';
 import { getProfile } from '@/lib/data/queries';
+import { normalizeAdvisorSettings } from '@/lib/advisor-settings';
 import {
   advisorModel,
   chatRequestSchema,
@@ -60,7 +61,13 @@ export async function POST(req: Request) {
   let failure: unknown;
   const result = streamText({
     model: advisorModel,
-    system: systemPrompt(cert, locale, catalog, knownFacts(profile, skills, languages)),
+    system: systemPrompt(
+      cert,
+      locale,
+      catalog,
+      knownFacts(profile, skills, languages),
+      normalizeAdvisorSettings(profile?.advisor_settings)
+    ),
     messages,
     onError({ error }) {
       failure = error;

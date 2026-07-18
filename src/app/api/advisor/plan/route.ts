@@ -3,6 +3,7 @@ import { createClient, getUser } from '@/lib/supabase/server';
 import { getAllCertifications, getCertificationById } from '@/lib/data/certifications';
 import { getResourcesForCertification } from '@/lib/data/resources';
 import { getProfile } from '@/lib/data/queries';
+import { normalizeAdvisorSettings } from '@/lib/advisor-settings';
 import {
   advisorModel,
   chatRequestSchema,
@@ -59,6 +60,7 @@ export async function POST(req: Request) {
     await getResourcesForCertification(cert.id),
     profile?.budget
   );
+  const settings = normalizeAdvisorSettings(profile?.advisor_settings);
 
   // Unlike streamText, generateObject rejects — so the failure arrives here and
   // gets the same treatment, otherwise a quota rejection would surface as an
@@ -68,11 +70,14 @@ export async function POST(req: Request) {
     ({ object: plan } = await generateObject({
       model: advisorModel,
       schema: planSchema,
-      system: systemPrompt(cert, locale, catalog, knownFacts(profile, skills, languages)),
-      prompt: `${planPrompt(cert, locale, offered, {
-        formats: profile?.preferred_resource_formats,
-        sites: profile?.preferred_resource_sites,
-      })}\n\nConversation so far:\n${messages.map((m) => `${m.role}: ${m.content}`).join('\n')}`,
+      system: systemPrompt(cert, locale, catalog, knownFacts(profile, skills, languages), settings),
+      prompt: `${planPrompt(
+        cert,
+        locale,
+        offered,
+        { formats: profile?.preferred_resource_formats, sites: profile?.preferred_resource_sites },
+        settings
+      )}\n\nConversation so far:\n${messages.map((m) => `${m.role}: ${m.content}`).join('\n')}`,
     }));
   } catch (err) {
     console.error('plan generation failed:', err);

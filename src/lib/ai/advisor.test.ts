@@ -1,6 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { knownFacts, planPrompt, resourcesForBudget, systemPrompt } from './advisor.ts';
+import {
+  advisorStyleLines,
+  knownFacts,
+  planPrompt,
+  resourcesForBudget,
+  systemPrompt,
+} from './advisor.ts';
+import { ADVISOR_DEFAULTS } from '../advisor-settings.ts';
 import type { LearningResource } from '@/lib/types';
 
 const resources = [
@@ -46,11 +53,24 @@ test('knownFacts reports what the profile holds', () => {
 });
 
 test('knownFacts carries skills and languages — they used to go nowhere', () => {
-  const facts = knownFacts(null, ['Linux', 'Python'], ['Arabic', 'English']);
+  const facts = knownFacts(
+    null,
+    [{ name: 'Linux', level: null }, { name: 'Python', level: null }],
+    ['Arabic', 'English']
+  );
   assert.deepEqual(facts, [
     { label: 'Skills they already have', value: 'Linux, Python' },
     { label: 'Languages they can sit an exam in', value: 'Arabic, English' },
   ]);
+});
+
+test('a skill level is carried into the fact when present', () => {
+  const facts = knownFacts(
+    null,
+    [{ name: 'Linux', level: 'advanced' }, { name: 'Bash', level: null }],
+    []
+  );
+  assert.equal(facts[0].value, 'Linux (advanced), Bash');
 });
 
 test('knownFacts omits empty skill and language lists', () => {
@@ -60,7 +80,32 @@ test('knownFacts omits empty skill and language lists', () => {
 test('a profile with only skills still produces facts', () => {
   // The early return keys off all three being empty, not off profile alone —
   // a user who filled in nothing but skills must not be reported as unknown.
-  assert.equal(knownFacts(null, ['Docker'], []).length, 1);
+  assert.equal(knownFacts(null, [{ name: 'Docker', level: null }], []).length, 1);
+});
+
+test('advisorStyleLines emits only the knobs that deviate from balanced', () => {
+  assert.deepEqual(advisorStyleLines(ADVISOR_DEFAULTS), []);
+  const lines = advisorStyleLines({ ...ADVISOR_DEFAULTS, tone: 'warm', length: 'brief' });
+  assert.equal(lines.length, 2);
+  assert.match(lines.join('\n'), /warm/);
+  assert.match(lines.join('\n'), /short/);
+});
+
+test('systemPrompt carries the style block only when a knob is tuned', () => {
+  const tuned = systemPrompt(undefined, 'en', [], [], { ...ADVISOR_DEFAULTS, tone: 'direct' });
+  assert.match(tuned, /Follow them/);
+  assert.match(tuned, /blunt/);
+  assert.doesNotMatch(systemPrompt(undefined, 'en', [], [], ADVISOR_DEFAULTS), /Follow them/);
+  // Passing no settings at all is the same as balanced: no block.
+  assert.doesNotMatch(systemPrompt(undefined, 'en', [], []), /Follow them/);
+});
+
+test('planPrompt paces the plan by intensity', () => {
+  const intense = planPrompt(undefined, 'en', [], {}, { ...ADVISOR_DEFAULTS, intensity: 'intense' });
+  const relaxed = planPrompt(undefined, 'en', [], {}, { ...ADVISOR_DEFAULTS, intensity: 'relaxed' });
+  assert.match(intense, /aggressively/);
+  assert.match(relaxed, /buffer/);
+  assert.doesNotMatch(planPrompt(undefined, 'en', [], {}, ADVISOR_DEFAULTS), /aggressively|buffer/);
 });
 
 test('the known block tells the model not to re-ask, and to check exam language', () => {

@@ -7,9 +7,36 @@ import type { Locale } from '@/lib/i18n';
 // node --test, which resolves neither the @/ alias nor extensionless imports.
 // (The @/ type-only imports above are fine — they erase before node sees them.)
 import { siteOf } from '../resource-prefs.ts';
+import type { AdvisorSettings } from '@/lib/advisor-settings';
 
 /** A learner's soft preferences over resources. Empty arrays mean "no preference". */
 export type ResourcePreferences = { formats?: string[]; sites?: string[] };
+
+/**
+ * Turns the tunable advisor settings into prompt instructions.
+ *
+ * Only non-'balanced' knobs produce a line, so a default (untuned) advisor gets
+ * an empty list and reads exactly as it did before settings existed. Honesty is
+ * never a knob — the "be honest, do not flatter" rule in the system prompt holds
+ * at every tone; tone only changes the delivery. intensity is handled in
+ * planPrompt, since it is about pacing a plan, not about conversation.
+ */
+export function advisorStyleLines(settings: AdvisorSettings): string[] {
+  const lines: string[] = [];
+  if (settings.tone === 'direct')
+    lines.push('- Tone: be blunt and to the point. Do not cushion bad news.');
+  if (settings.tone === 'warm')
+    lines.push('- Tone: be warm and encouraging. Stay honest about fit, but deliver it supportively.');
+  if (settings.length === 'brief')
+    lines.push('- Length: keep replies short — a sentence or two, no preamble.');
+  if (settings.length === 'detailed')
+    lines.push('- Length: explain your reasoning in full; give the why behind each recommendation.');
+  if (settings.questions === 'few')
+    lines.push('- Questions: ask as little as possible. Infer from the profile and reach a plan quickly.');
+  if (settings.questions === 'thorough')
+    lines.push('- Questions: ask several clarifying questions before committing to a plan; do not rush.');
+  return lines;
+}
 
 /**
  * Shared between the chat route and the plan route.
@@ -87,12 +114,13 @@ export function knownFacts(
     job_role?: string | null;
     experience_level?: string | null;
     budget?: number | null;
+    budget_currency?: string | null;
     daily_study_time?: number | null;
     weekly_availability?: number | null;
     preferred_resource_formats?: string[] | null;
     preferred_resource_sites?: string[] | null;
   } | null,
-  skills: string[] = [],
+  skills: { name: string; level?: string | null }[] = [],
   languages: string[] = []
 ): KnownFacts {
   if (!profile && skills.length === 0 && languages.length === 0) return [];
@@ -113,14 +141,21 @@ export function knownFacts(
   if (profile?.budget !== null && profile?.budget !== undefined) {
     push(
       'Their budget for learning materials',
-      profile.budget === 0 ? '0 — they can only use free resources' : `${profile.budget} USD`
+      profile.budget === 0
+        ? '0 — they can only use free resources'
+        : `${profile.budget} ${profile.budget_currency ?? 'USD'}`
     );
   }
 
   // Skills and languages were collected by the profile and read by nothing —
   // the user typed them in and no part of the app ever looked. They are the two
   // facts the advisor most obviously should not be re-asking for.
-  push('Skills they already have', skills.length > 0 ? skills.join(', ') : undefined);
+  // A skill with a level says far more than a bare noun: "Linux (advanced)"
+  // tells the advisor not to spend a week on basics.
+  const skillList = skills
+    .map((s) => (s.level ? `${s.name} (${s.level})` : s.name))
+    .join(', ');
+  push('Skills they already have', skills.length > 0 ? skillList : undefined);
   push(
     'Languages they can sit an exam in',
     languages.length > 0 ? languages.join(', ') : undefined
@@ -142,8 +177,10 @@ export function systemPrompt(
   cert: Certification | undefined,
   locale: Locale,
   catalog: Certification[],
-  known: KnownFacts = []
+  known: KnownFacts = [],
+  settings?: AdvisorSettings
 ): string {
+  const style = settings ? advisorStyleLines(settings) : [];
   return [
     'You are the SkillStack certification advisor.',
     `Reply only in ${LANGUAGE[locale]}. Keep certification names, provider names and technical terms in their original form.`,
@@ -157,6 +194,13 @@ export function systemPrompt(
     '- Never invent exam costs, durations or pass rates. Use only the facts given below.',
     '- No emoji. No exclamation marks. Plain, specific language.',
     '',
+    // How the learner asked to be spoken to. Only deviations from the balanced
+    // default appear; honesty is not among them — it holds at every tone.
+    style.length > 0
+      ? ['The learner set preferences for how you respond. Follow them:', style.join('\n'), ''].join(
+          '\n'
+        )
+      : '',
     // The profile already holds most of what the advisor used to ask for, and
     // asking a person to retype what they typed into their profile is how an
     // app tells them it wasn't listening.
@@ -222,10 +266,18 @@ export function planPrompt(
   cert: Certification | undefined,
   locale: Locale,
   resources: LearningResource[] = [],
-  preferences: ResourcePreferences = {}
+  preferences: ResourcePreferences = {},
+  settings?: AdvisorSettings
 ): string {
   const formats = preferences.formats ?? [];
   const sites = preferences.sites ?? [];
+  const intensity = settings?.intensity ?? 'balanced';
+  const intensityLine =
+    intensity === 'relaxed'
+      ? 'Pace the plan with buffer: fewer hours per week and generous review time. Do not fill every day.'
+      : intensity === 'intense'
+        ? 'Pace the plan aggressively toward the target date: pack the weeks and minimise slack, while staying realistic to the hours they stated.'
+        : '';
   // A preference is a tie-breaker, never a filter: excluding good resources a
   // learner didn't pre-approve is how you hand someone a week with nothing in
   // it. So this steers ordering, and the "do not exclude" line is load-bearing.
@@ -244,6 +296,7 @@ export function planPrompt(
   return [
     `Produce a study plan in ${LANGUAGE[locale]} based on the conversation.`,
     'Pace it to the hours per day the user actually stated, not to an ideal schedule.',
+    intensityLine,
     'Total the weekly hours to roughly the certification\'s typical study time.',
     'Include at least one review week and at least one practice exam before the target date.',
     'Set recommended=false if the conversation showed this is a poor fit.',
