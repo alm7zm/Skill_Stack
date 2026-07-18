@@ -2,6 +2,7 @@ import { streamText } from 'ai';
 import { getUser } from '@/lib/supabase/server';
 import { getAllCertifications, getCertificationById } from '@/lib/data/certifications';
 import { getProfile } from '@/lib/data/queries';
+import { rateLimit } from '@/lib/rate-limit';
 import { normalizeAdvisorSettings } from '@/lib/advisor-settings';
 import {
   advisorModel,
@@ -25,6 +26,13 @@ export async function POST(req: Request) {
   const user = await getUser();
   if (!user) {
     return Response.json({ error: 'unauthorized' }, { status: 401 });
+  }
+
+  // Then a per-user cap, so one account can't run up the bill. 429 + retryAfter
+  // is the shape the chat client already renders as the quota notice.
+  const limit = await rateLimit(user.id, 'advisor', 15);
+  if (!limit.ok) {
+    return Response.json({ error: 'rate_limited', retryAfter: limit.retryAfter }, { status: 429 });
   }
 
   let body: unknown;

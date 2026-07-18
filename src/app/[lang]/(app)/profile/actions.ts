@@ -60,7 +60,11 @@ export async function updateProfile(formData: FormData) {
   // .eq('id', user.id) is belt-and-braces; the update policy already restricts
   // this to auth.uid() = id.
   const { error } = await supabase.from('profiles').update(parsed.data).eq('id', user.id);
-  if (error) throw new Error(`Could not save profile: ${error.message}`);
+  if (error) {
+    // Log the DB detail server-side; don't leak Postgres internals to the client.
+    console.error('updateProfile failed:', error.message);
+    throw new Error('Could not save your profile. Please try again.');
+  }
 
   revalidatePath('/[lang]/profile', 'page');
 }

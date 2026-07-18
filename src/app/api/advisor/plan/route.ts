@@ -3,6 +3,7 @@ import { createClient, getUser } from '@/lib/supabase/server';
 import { getAllCertifications, getCertificationById } from '@/lib/data/certifications';
 import { getResourcesForCertification } from '@/lib/data/resources';
 import { getProfile } from '@/lib/data/queries';
+import { rateLimit } from '@/lib/rate-limit';
 import { normalizeAdvisorSettings } from '@/lib/advisor-settings';
 import {
   advisorModel,
@@ -30,6 +31,12 @@ export async function POST(req: Request) {
   const user = await getUser();
   if (!user) {
     return Response.json({ error: 'unauthorized' }, { status: 401 });
+  }
+
+  // Plan generation is the pricier call, so a tighter cap than the chat.
+  const limit = await rateLimit(user.id, 'plan', 5);
+  if (!limit.ok) {
+    return Response.json({ error: 'rate_limited', retryAfter: limit.retryAfter }, { status: 429 });
   }
 
   let body: unknown;
