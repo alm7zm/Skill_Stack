@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { getDictionary } from '../../dictionaries';
 import { isLocale } from '@/lib/i18n';
 import { searchCertifications } from '@/lib/data/certifications';
+import { getUserCurrency } from '@/lib/data/queries';
 import { DIFFICULTY_ORDER, plural } from '@/lib/utils';
 import { CertCard } from '@/components/app/cert-card';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -42,7 +43,10 @@ export default async function SearchPage({
   // Postgres filters and returns only the matching rows. This used to pull the
   // whole catalog into memory and filter it in JS, which was fine at 28 rows and
   // is the thing that stops being fine as the catalog grows.
-  const results = await searchCertifications({ q, category, difficulty });
+  const [results, currency] = await Promise.all([
+    searchCertifications({ q, category, difficulty }),
+    getUserCurrency(),
+  ]);
 
   const hasFilters = Boolean(q || category || difficulty);
 
@@ -116,6 +120,7 @@ export default async function SearchPage({
               <CertCard
                 cert={cert}
                 lang={lang}
+                displayCurrency={currency}
                 labels={{
                   category: dict.categories[cert.category],
                   difficulty: dict.difficulty[cert.difficulty],

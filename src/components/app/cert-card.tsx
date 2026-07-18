@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { DifficultyMeter } from '@/components/ui/difficulty-meter';
-import { formatCurrency, formatStudyTime } from '@/lib/utils';
+import { formatExamCost, formatStudyTime } from '@/lib/utils';
 import type { Locale } from '@/lib/i18n';
 import type { Certification } from '@/lib/types';
 
@@ -17,6 +17,7 @@ export function CertCard({
   cert,
   lang,
   labels,
+  displayCurrency,
 }: {
   cert: Certification;
   lang: Locale;
@@ -28,6 +29,8 @@ export function CertCard({
     hours: Record<string, string>;
     weeks: Record<string, string>;
   };
+  /** The user's preferred currency; costs are shown converted to it. */
+  displayCurrency?: string;
 }) {
   return (
     <Card as="article" interactive className="flex flex-col p-5">
@@ -63,7 +66,12 @@ export function CertCard({
         <span className="tabular ms-auto text-xs font-medium text-ink">
           {cert.examCost === 0
             ? labels.free
-            : formatCurrency(cert.examCost, lang, cert.examCostCurrency)}
+            : formatExamCost(
+                cert.examCost,
+                cert.examCostCurrency,
+                displayCurrency ?? cert.examCostCurrency,
+                lang
+              )}
         </span>
       </div>
     </Card>

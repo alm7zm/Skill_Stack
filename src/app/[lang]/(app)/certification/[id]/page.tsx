@@ -5,9 +5,17 @@ import { getDictionary } from '../../../dictionaries';
 import { isLocale } from '@/lib/i18n';
 import { getCertificationById } from '@/lib/data/certifications';
 import { getResourcesForCertification } from '@/lib/data/resources';
+import { getUserCurrency } from '@/lib/data/queries';
 import { siteOf } from '@/lib/resource-prefs';
 import { getUser } from '@/lib/supabase/server';
-import { formatCurrency, formatDate, formatNumber, formatStudyTime, interpolate } from '@/lib/utils';
+import {
+  formatCurrency,
+  formatExamCost,
+  formatDate,
+  formatNumber,
+  formatStudyTime,
+  interpolate,
+} from '@/lib/utils';
 import { Card, CardWell } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { DifficultyMeter } from '@/components/ui/difficulty-meter';
@@ -57,10 +65,11 @@ export default async function CertificationPage({
   // signed-out visitor is sent to sign in *before* writing a report, rather than
   // after — a form action resets the form, so asking afterwards discards
   // everything they just typed.
-  const [dict, resources, user] = await Promise.all([
+  const [dict, resources, user, currency] = await Promise.all([
     getDictionary(lang),
     getResourcesForCertification(cert.id),
     getUser(),
+    getUserCurrency(),
   ]);
   const t = dict.certification;
 
@@ -70,7 +79,7 @@ export default async function CertificationPage({
       value:
         cert.examCost === 0
           ? dict.common.free
-          : formatCurrency(cert.examCost, lang, cert.examCostCurrency),
+          : formatExamCost(cert.examCost, cert.examCostCurrency, currency, lang),
     },
     {
       label: t.studyTime,

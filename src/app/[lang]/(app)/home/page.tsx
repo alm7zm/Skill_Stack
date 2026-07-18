@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { getDictionary } from '../../dictionaries';
 import { isLocale } from '@/lib/i18n';
 import { getUser } from '@/lib/supabase/server';
-import { getPlans } from '@/lib/data/queries';
+import { getPlans, getUserCurrency } from '@/lib/data/queries';
 import { getAllCertifications, getTrendingCertifications } from '@/lib/data/certifications';
 import { CertCard } from '@/components/app/cert-card';
 import { Card } from '@/components/ui/card';
@@ -26,7 +26,7 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
   const { lang } = await params;
   if (!isLocale(lang)) notFound();
 
-  const [dict, user, plans, trendingAll, catalog] = await Promise.all([
+  const [dict, user, plans, trendingAll, catalog, currency] = await Promise.all([
     getDictionary(lang),
     getUser(),
     getPlans(),
@@ -35,6 +35,7 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
     // plan inside the map below was free against an array and is a query per
     // plan against the database.
     getAllCertifications(),
+    getUserCurrency(),
   ]);
   const t = dict.home;
 
@@ -124,7 +125,7 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
         <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {trending.map((cert) => (
             <li key={cert.id} className="flex">
-              <CertCard cert={cert} lang={lang} labels={cardLabels(dict, cert.category, cert.difficulty)} />
+              <CertCard cert={cert} lang={lang} displayCurrency={currency} labels={cardLabels(dict, cert.category, cert.difficulty)} />
             </li>
           ))}
         </ul>

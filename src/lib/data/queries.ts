@@ -216,3 +216,14 @@ export async function getProfile(): Promise<{
     languages: (languages ?? []).map((l) => l.language_name),
   };
 }
+
+/**
+ * Just the currency the user wants prices shown in — for the cert lists and the
+ * detail page, which don't otherwise need the whole profile. Falls back to USD
+ * for signed-out visitors and profiles that never set one.
+ */
+export async function getUserCurrency(): Promise<string> {
+  const supabase = await createClient();
+  const { data } = await supabase.from('profiles').select('budget_currency').maybeSingle();
+  return data?.budget_currency ?? 'USD';
+}

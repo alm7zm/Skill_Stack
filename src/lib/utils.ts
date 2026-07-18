@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { convertCurrency } from './rates';
 import type { Locale } from './i18n';
 import type { Difficulty } from './types';
 
@@ -24,6 +25,24 @@ export function formatCurrency(amount: number, locale: Locale, currency = 'USD')
     currency,
     maximumFractionDigits: 0,
   }).format(amount);
+}
+
+/**
+ * An exam cost shown in the user's currency. When it differs from the cost's own
+ * currency the amount is converted and prefixed "≈", because the rate is a
+ * static approximation. Falls back to the native amount if no rate is known.
+ * Callers handle a zero cost themselves (it renders as "free", not a number).
+ */
+export function formatExamCost(
+  amount: number,
+  costCurrency: string,
+  displayCurrency: string,
+  locale: Locale
+): string {
+  if (displayCurrency === costCurrency) return formatCurrency(amount, locale, costCurrency);
+  const converted = convertCurrency(amount, costCurrency, displayCurrency);
+  if (converted == null) return formatCurrency(amount, locale, costCurrency);
+  return `≈ ${formatCurrency(converted, locale, displayCurrency)}`;
 }
 
 export function formatDate(date: string | Date, locale: Locale): string {

@@ -82,6 +82,11 @@ export default async function ProfilePage({ params }: { params: Promise<{ lang: 
           />
 
           <Select
+            // Re-key on the saved value: a Server Action resets uncontrolled
+            // fields to their mount-time defaultValue, which snaps a <select>
+            // back to the old value even though the new one saved. Remounting on
+            // the saved value makes it initialise to what was just stored.
+            key={`experience_level-${profile?.experience_level ?? ''}`}
             label={t.experienceLevel}
             name="experience_level"
             hint={t.experienceLevelHint}
@@ -135,6 +140,9 @@ export default async function ProfilePage({ params }: { params: Promise<{ lang: 
               defaultValue={profile?.budget?.toString() ?? ''}
             />
             <Select
+              // See experience_level above — remount so the saved currency
+              // sticks after the Server Action instead of snapping back.
+              key={`budget_currency-${profile?.budget_currency ?? 'USD'}`}
               label={t.budgetCurrency}
               name="budget_currency"
               defaultValue={profile?.budget_currency ?? 'USD'}
