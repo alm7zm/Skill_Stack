@@ -76,7 +76,9 @@
     "charCount": "Characters used",
     "submit": "Send report",
     "sending": "Sending",
-    "thanks": "Thanks — we'll take a look.",
+    "sentTitle": "Report sent",
+    "sentBody": "Thanks — the developer will take a look.",
+    "close": "Close",
     "error": "Couldn't send that. Please try again.",
     "cancel": "Cancel"
   },
