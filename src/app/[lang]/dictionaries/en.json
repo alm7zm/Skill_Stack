@@ -347,6 +347,8 @@
     "syncing": "Syncing",
     "synced": "In your calendar",
     "resync": "Update calendar",
+    "calendarConnect": "Connect your Google Calendar in {settings} to add this plan.",
+    "calendarError": "Couldn't add this plan to your calendar. Try again.",
     "notFound": "That plan doesn't exist, or it isn't yours.",
     "resources": "Resources",
     "paid": "Paid",

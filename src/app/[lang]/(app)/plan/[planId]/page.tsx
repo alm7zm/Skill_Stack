@@ -2,7 +2,9 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getDictionary } from '../../../dictionaries';
 import { isLocale } from '@/lib/i18n';
+import { getUser } from '@/lib/supabase/server';
 import { getPlan } from '@/lib/data/queries';
+import { isCalendarConnected } from '@/app/[lang]/(app)/settings/calendar-status';
 import { getResourcesByIds } from '@/lib/data/resources';
 import { siteOf } from '@/lib/resource-prefs';
 import type { LearningResource } from '@/lib/types';
@@ -10,6 +12,7 @@ import { formatDate, formatNumber, interpolate, pluralUnit } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { ButtonLink } from '@/components/ui/button';
 import { DeletePlanButton } from '@/components/app/delete-plan-button';
+import { SyncCalendarButton } from '@/components/app/sync-calendar-button';
 import { toggleTopic } from './actions';
 
 export default async function PlanPage({
@@ -20,15 +23,24 @@ export default async function PlanPage({
   const { lang, planId } = await params;
   if (!isLocale(lang)) notFound();
 
-  const [dict, plan] = await Promise.all([getDictionary(lang), getPlan(planId)]);
+  const [dict, plan, user] = await Promise.all([
+    getDictionary(lang),
+    getPlan(planId),
+    getUser(),
+  ]);
 
   // getPlan returns null both for "does not exist" and "not yours" — RLS makes
   // them indistinguishable, which is the right answer to give either way.
   if (!plan) notFound();
 
+  const calendarConnected = await isCalendarConnected(user?.id);
+
   const t = dict.plan;
   const weeks = plan.row.plan?.weeks ?? [];
   const doneIds = new Set(plan.topics.filter((x) => x.completed).map((x) => x.topic_id));
+  // "Update calendar" vs "Add" — any topic already carrying an event id means
+  // this plan has been synced before.
+  const alreadySynced = plan.topics.some((x) => x.calendar_event_id);
 
   // One query for the whole plan, not one per week. Resources moved to the
   // database, so a lookup inside the weeks.map() below would be a query per week
@@ -81,10 +93,25 @@ export default async function PlanPage({
           </span>
         </div>
 
-        <div className="mt-5 flex items-center gap-2">
+        <div className="mt-5 flex flex-wrap items-start gap-2">
           <ButtonLink href={`/${lang}/plan/${plan.row.id}/edit`} variant="secondary" size="sm">
             {t.edit}
           </ButtonLink>
+          <SyncCalendarButton
+            lang={lang}
+            planId={plan.row.id}
+            connected={calendarConnected}
+            alreadySynced={alreadySynced}
+            labels={{
+              add: t.syncCalendar,
+              syncing: t.syncing,
+              synced: t.synced,
+              resync: t.resync,
+              connect: t.calendarConnect,
+              settings: dict.nav.settings,
+              error: t.calendarError,
+            }}
+          />
           <DeletePlanButton
             lang={lang}
             planId={plan.row.id}
