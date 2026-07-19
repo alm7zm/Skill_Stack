@@ -59,12 +59,15 @@ and `study_plan_topics` already carry everything. Plan shape mirrors `StoredPlan
 `{ weekNumber, title, estimatedHours, hasPracticeExam, isReviewWeek, resourceIds[], topics[] }`;
 a topic is `{ id, title, description, estimatedHours }`.
 
-**One migration is required:** a DELETE policy on `study_plan_topics`. Today it
-has select/insert/update only (`supabase/schema.sql`). Reconciliation must delete
+**One migration is required** (still no table or column changes). It adds two
+things: (a) a DELETE policy on `study_plan_topics` — today it has
+select/insert/update only (`supabase/schema.sql`), and reconciliation must delete
 rows for removed topics; without the policy the delete is silently blocked by RLS
 and orphaned completed rows would inflate the dashboard's `done` count (which
-counts completed topic rows, not topics still present in the plan). Policy scopes
-through `study_plans.user_id = auth.uid()`, matching the sibling policies.
+counts completed topic rows, not topics still present in the plan); and (b) the
+`SECURITY INVOKER` `plpgsql` function that performs the transactional save (see
+`savePlan`). The DELETE policy scopes through `study_plans.user_id = auth.uid()`,
+matching the sibling policies.
 
 ## Units
 
@@ -81,8 +84,15 @@ through `study_plans.user_id = auth.uid()`, matching the sibling policies.
   - Save and Cancel.
 
   New topics receive a generated stable id (`crypto.randomUUID`); editing an
-  existing topic keeps its id. `weekNumber` is normalized to sequential 1..N on
-  every render/save so reordering stays consistent.
+  existing topic keeps its id. A topic produced by duplicating or copying another
+  always gets a fresh UUID, never the original's — it is a new learning item and
+  must not inherit the original's completion state. `weekNumber` is normalized to
+  sequential 1..N on every render/save so reordering stays consistent.
+
+  **Unsaved-changes protection.** The editor tracks whether the draft differs
+  from the originally loaded plan. If it does, Cancel or navigating away opens a
+  confirmation dialog offering "Continue editing" or "Discard changes"; if nothing
+  has changed, Cancel navigates away immediately with no prompt.
 
 - **`savePlan`** (server action). Validates the incoming draft (zod, trust
   boundary), filters each week's `resourceIds` against the certification's catalog
@@ -98,6 +108,17 @@ through `study_plans.user_id = auth.uid()`, matching the sibling policies.
   - delete rows for `currentIds − newIds`;
   - leave survivors (`newIds ∩ currentIds`) untouched → completion preserved.
 
+  **Atomicity.** The entire save — insert/update the `study_plans` row, update
+  `target_date`, and the topic insert/delete reconciliation — runs inside a single
+  database transaction. Any failure rolls the whole operation back, so the `plan`
+  jsonb can never end up inconsistent with `study_plan_topics` (e.g. a plan whose
+  weeks reference topics that were never inserted, or completed rows for topics no
+  longer in the plan). PostgREST auto-commits each call individually, so this is
+  realized as one `plpgsql` function invoked via `supabase.rpc(...)`, added in the
+  same migration as the DELETE policy. It is `SECURITY INVOKER`, so every statement
+  inside still passes through the caller's RLS on both tables — the function is an
+  atomicity boundary, not an authorization bypass.
+
   New plans **insert only on first Save**, never on "New" click, so an abandoned
   draft never leaves an empty plan in the dashboard — which removes any need for a
   delete-plan feature.
@@ -106,10 +127,16 @@ through `study_plans.user_id = auth.uid()`, matching the sibling policies.
   Runs `generateObject` with the existing `advisorModel`, `planSchema`, and
   `systemPrompt`, plus a revise-prompt that includes the current plan JSON and the
   instruction, and tells the model to **keep existing topic ids for unchanged or
-  moved topics** and mint new ids only for genuinely new topics (so completion
-  survives AI edits). Returns the revised plan **unsaved**. Rate-limited via the
-  existing `rateLimit(user.id, 'plan', …)` and answers provider failures with the
-  shared `providerErrorResponse`.
+  moved topics** and mint new ids only for genuinely new topics. The prompt is not
+  trusted to do this alone: before the revised plan is returned, a server-side
+  id-matching pass reconciles it against the original plan — each returned topic is
+  matched to an original topic by normalized title (case- and whitespace-
+  insensitive, falling back to description when titles are ambiguous), and a match
+  reuses the original topic's id. Only topics with no match receive a fresh
+  `crypto.randomUUID`. So completion state is protected even if the model rewrites
+  identifiers. Returns the revised plan **unsaved**. Rate-limited via the existing
+  `rateLimit(user.id, 'plan', …)` and answers provider failures with the shared
+  `providerErrorResponse`.
 
 - Thin RSC pages:
   - `plan/[planId]/edit/page.tsx` — loads the plan, its resources, and the
@@ -140,17 +167,23 @@ Discard reverts the draft to the loaded plan.
 
 ## Validation
 
-Server-side zod on Save (the body comes from a browser):
+Server-side zod on Save (the body comes from a browser and is never trusted):
 - weeks 1–104 (reuse `planSchema` bounds); `summary`/`recommended` optional for
   manual plans;
+- the plan must contain **at least one topic** overall — not merely one week; a
+  plan with no topics has nothing to track and is rejected;
 - topic ids non-empty and unique across the plan (backstopped by the
   `unique(study_plan_id, topic_id)` constraint);
-- `estimatedHours ≥ 0`; `title` non-empty; `weekNumber` int ≥ 1 (renumbered
-  server-side regardless);
+- `estimatedHours` must be non-negative on every week and topic; `title`
+  non-empty;
+- incoming `weekNumber` values are never trusted — they are always renumbered
+  sequentially 1..N on the server before saving, whatever the client sent;
+- any ownership fields in the body (e.g. `user_id`) are ignored; the row's owner
+  is always `auth.uid()`, enforced by the insert policy;
 - `resourceIds` filtered to the certification's catalog ids.
 
-A plan must have at least one week to Save; a week may have zero topics but
-renders a hint.
+A week may have zero topics (it renders a hint), but the plan as a whole must have
+at least one topic to Save.
 
 ## i18n
 
@@ -185,7 +218,10 @@ Existing gate before commit: `tsc --noEmit`, `npm test`, `eslint`, dict-parity,
 ## Risks
 
 - **Reconciliation correctness** is the load-bearing piece (completion loss is the
-  worst failure). Mitigated by isolating it in one function with a unit test.
-- **AI-edit id stability** — if the model re-mints ids for unchanged topics,
-  their completion resets. Mitigated by the prompt instruction and the fact that
-  the user previews before saving.
+  worst failure). Mitigated by isolating it in one function with a unit test, and
+  by running the whole save in a single transaction so a partial failure cannot
+  leave the plan jsonb and the topic table out of sync.
+- **AI-edit id stability** — if the model re-mints ids for unchanged topics, their
+  completion would reset. Mitigated in depth: the prompt asks the model to keep
+  ids, a server-side title/description matching pass restores original ids before
+  the draft is returned, and the user previews before saving.
