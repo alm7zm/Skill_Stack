@@ -35,7 +35,7 @@ export default async function AuthLayout({
       </header>
 
       <main id="main" className="relative flex flex-1 items-center justify-center px-6 pb-20">
-        <div className="w-full max-w-sm">
+        <div className="rise w-full max-w-sm">
           {children}
 
           <p className="mt-8 text-center text-xs text-ink-faint">

@@ -59,19 +59,24 @@ export default async function LandingPage({ params }: { params: Promise<{ lang: 
 
           <div className="relative mx-auto grid max-w-6xl grid-cols-1 gap-8 px-6 pb-20 pt-16 md:grid-cols-12 md:pb-28 md:pt-24">
             <div className="md:col-span-7">
-              <p className="text-xs font-medium uppercase tracking-[0.14em] text-accent">
+              <p className="rise text-xs font-medium uppercase tracking-[0.14em] text-accent">
                 {t.hero.eyebrow}
               </p>
 
-              <h1 className="mt-5 font-display text-[2.75rem] font-semibold leading-[1.03] tracking-[-0.03em] text-ink sm:text-6xl lg:text-7xl">
+              {/* No animation-delay on the title: it's the LCP element, so its
+                  paint should not wait on a stagger. */}
+              <h1 className="rise mt-5 font-display text-[2.75rem] font-semibold leading-[1.03] tracking-[-0.03em] text-ink sm:text-6xl lg:text-7xl">
                 {t.hero.title}
               </h1>
 
-              <p className="prose-measure mt-6 text-lg leading-relaxed text-ink-muted">
+              <p
+                className="rise prose-measure mt-6 text-lg leading-relaxed text-ink-muted"
+                style={{ animationDelay: '0.1s' }}
+              >
                 {t.hero.body}
               </p>
 
-              <div className="mt-9 flex flex-wrap items-center gap-4">
+              <div className="rise mt-9 flex flex-wrap items-center gap-4" style={{ animationDelay: '0.18s' }}>
                 <ButtonLink href={`/${lang}/auth`} size="lg">
                   {t.hero.cta}
                 </ButtonLink>

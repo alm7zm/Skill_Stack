@@ -176,6 +176,26 @@ p {
   }
 }
 
+/* On-load entrances and state-change reveals — same fade+rise language as the
+   scroll reveal above, but time-based (fires once on mount). Stagger siblings
+   with an inline animation-delay. translateY only, so nothing shifts sideways
+   under RTL. animation-fill-mode:both holds the start frame through any delay
+   (no flash of content before it hides), and the reduced-motion block above
+   neutralises all of these. */
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes settle-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.rise     { animation: rise-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
+/* Fields that appear on switching to sign-up, and the heading that swaps with
+   the mode — they settle down from just above their resting place. */
+.field-in { animation: settle-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
 /* ===========================================================================
    Texture — the logo sits on grid paper; the page echoes it.
    Beats a flat fill, and it is 2 gradients rather than an image request.

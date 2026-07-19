@@ -303,8 +303,12 @@ export function AuthForm({
 
   return (
     <div>
-      <h1 className="font-display text-3xl font-semibold text-ink">{heading.title}</h1>
-      <p className="mt-2 text-sm text-ink-muted">{heading.subtitle}</p>
+      {/* key={mode}: remounting on a mode change replays the CSS enter, so the
+          heading cross-fades between "Sign in" / "Create account" / reset. */}
+      <div key={mode} className="field-in">
+        <h1 className="font-display text-3xl font-semibold text-ink">{heading.title}</h1>
+        <p className="mt-2 text-sm text-ink-muted">{heading.subtitle}</p>
+      </div>
 
       {mode !== 'reset' && (
         <div className="mt-8">
@@ -363,24 +367,26 @@ export function AuthForm({
         className={cn('flex flex-col gap-4', mode === 'reset' && 'mt-8')}
       >
         {mode === 'signup' && (
-          <Field
-            label={labels.nameLabel}
-            type="text"
-            name="name"
-            autoComplete="name"
-            placeholder={labels.namePlaceholder}
-            icon={<UserIcon />}
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value);
-              if (touched.name) setErrors((p) => ({ ...p, name: nameError(e.target.value) }));
-            }}
-            onBlur={() => {
-              setTouched((p) => ({ ...p, name: true }));
-              setErrors((p) => ({ ...p, name: nameError(name) }));
-            }}
-            error={errors.name}
-          />
+          <div className="field-in">
+            <Field
+              label={labels.nameLabel}
+              type="text"
+              name="name"
+              autoComplete="name"
+              placeholder={labels.namePlaceholder}
+              icon={<UserIcon />}
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (touched.name) setErrors((p) => ({ ...p, name: nameError(e.target.value) }));
+              }}
+              onBlur={() => {
+                setTouched((p) => ({ ...p, name: true }));
+                setErrors((p) => ({ ...p, name: nameError(name) }));
+              }}
+              error={errors.name}
+            />
+          </div>
         )}
 
         <Field
@@ -460,29 +466,31 @@ export function AuthForm({
             but is opt-in — and a mistyped password is only discovered later, at
             sign-in, by which point it is a support problem rather than a form one. */}
         {mode === 'signup' && (
-          <Field
-            label={labels.confirmLabel}
-            type="password"
-            name="confirmPassword"
-            autoComplete="new-password"
-            icon={<LockIcon />}
-            reveal={{ show: labels.password.show, hide: labels.password.hide }}
-            value={confirm}
-            onChange={(e) => {
-              setConfirm(e.target.value);
-              if (touched.confirm)
-                setErrors((p) => ({ ...p, confirm: confirmError(e.target.value) }));
-            }}
-            onBlur={() => {
-              setTouched((p) => ({ ...p, confirm: true }));
-              setErrors((p) => ({ ...p, confirm: confirmError(confirm) }));
-            }}
-            error={errors.confirm}
-          />
+          <div className="field-in">
+            <Field
+              label={labels.confirmLabel}
+              type="password"
+              name="confirmPassword"
+              autoComplete="new-password"
+              icon={<LockIcon />}
+              reveal={{ show: labels.password.show, hide: labels.password.hide }}
+              value={confirm}
+              onChange={(e) => {
+                setConfirm(e.target.value);
+                if (touched.confirm)
+                  setErrors((p) => ({ ...p, confirm: confirmError(e.target.value) }));
+              }}
+              onBlur={() => {
+                setTouched((p) => ({ ...p, confirm: true }));
+                setErrors((p) => ({ ...p, confirm: confirmError(confirm) }));
+              }}
+              error={errors.confirm}
+            />
+          </div>
         )}
 
         {mode === 'signup' && (
-          <div>
+          <div className="field-in">
             <label className="flex cursor-pointer items-start gap-2">
               <input
                 type="checkbox"
