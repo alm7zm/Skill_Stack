@@ -33,6 +33,7 @@ export function AppNav({
     dashboard: string;
     profile: string;
     settings: string;
+    developer: string;
     switchLanguage: string;
     openMenu: string;
     closeMenu: string;
@@ -101,6 +102,7 @@ export function AppNav({
               labels={{
                 account: labels.account,
                 profile: labels.profile,
+                developer: labels.developer,
                 settings: labels.settings,
                 signOut: labels.signOut,
                 signingOut: labels.signingOut,

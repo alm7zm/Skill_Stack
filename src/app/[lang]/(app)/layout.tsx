@@ -40,6 +40,7 @@ export default async function AppLayout({
           dashboard: dict.nav.dashboard,
           profile: dict.nav.profile,
           settings: dict.nav.settings,
+          developer: dict.nav.developer,
           switchLanguage: dict.a11y.switchLanguage,
           openMenu: dict.a11y.openMenu,
           closeMenu: dict.a11y.closeMenu,

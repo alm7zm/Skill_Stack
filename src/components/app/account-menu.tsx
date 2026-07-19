@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { Locale } from '@/lib/i18n';
 
+const DEVELOPER_LINKEDIN = 'https://www.linkedin.com/in/hussam-aldossary';
+
 /**
  * The account menu behind the avatar: who you are, where to go, and the way out.
  *
@@ -33,6 +35,7 @@ export function AccountMenu({
   labels: {
     account: string;
     profile: string;
+    developer: string;
     settings: string;
     signOut: string;
     signingOut: string;
@@ -121,6 +124,29 @@ export function AccountMenu({
             <MenuLink href={`/${lang}/profile`} onClick={() => setOpen(false)}>
               {labels.profile}
             </MenuLink>
+            {/* The person who built this. External, so it opens in a new tab and
+                does not throw away the app session the user is in. */}
+            <a
+              href={DEVELOPER_LINKEDIN}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setOpen(false)}
+              className="flex items-center justify-between gap-2 rounded-sm px-2.5 py-2 text-sm text-ink-muted transition-colors hover:bg-paper-sunken hover:text-ink"
+            >
+              {labels.developer}
+              <svg
+                viewBox="0 0 12 12"
+                aria-hidden="true"
+                className="h-3 w-3 text-ink-faint"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M4.5 2.5H9.5V7.5M9.5 2.5L3 9" />
+              </svg>
+            </a>
             <MenuLink href={`/${lang}/settings`} onClick={() => setOpen(false)}>
               {labels.settings}
             </MenuLink>
