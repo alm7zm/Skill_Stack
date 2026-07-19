@@ -8,6 +8,7 @@ import { siteOf } from '@/lib/resource-prefs';
 import type { LearningResource } from '@/lib/types';
 import { formatDate, formatNumber, interpolate, pluralUnit } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
+import { ButtonLink } from '@/components/ui/button';
 import { toggleTopic } from './actions';
 
 export default async function PlanPage({
@@ -77,6 +78,12 @@ export default async function PlanPage({
           <span className="tabular text-xs font-medium text-ink-muted">
             {formatNumber(plan.percentage, lang)}%
           </span>
+        </div>
+
+        <div className="mt-5">
+          <ButtonLink href={`/${lang}/plan/${plan.row.id}/edit`} variant="secondary" size="sm">
+            {t.edit}
+          </ButtonLink>
         </div>
       </header>
 

@@ -5,6 +5,7 @@ import { isLocale } from '@/lib/i18n';
 import { getDashboard } from '@/lib/data/queries';
 import { formatNumber, formatDate, interpolate } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
+import { ButtonLink } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 
 /**
@@ -22,7 +23,10 @@ export default async function DashboardPage({ params }: { params: Promise<{ lang
   if (data.plans.length === 0) {
     return (
       <div className="mx-auto max-w-6xl px-6 py-10">
-        <h1 className="font-display text-3xl font-semibold text-ink">{t.title}</h1>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="font-display text-3xl font-semibold text-ink">{t.title}</h1>
+          <ButtonLink href={`/${lang}/plan/new`} size="sm">{t.newPlan}</ButtonLink>
+        </div>
         <EmptyState
           className="mt-8"
           title={t.empty.title}
@@ -42,7 +46,10 @@ export default async function DashboardPage({ params }: { params: Promise<{ lang
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
-      <h1 className="font-display text-3xl font-semibold text-ink">{t.title}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="font-display text-3xl font-semibold text-ink">{t.title}</h1>
+        <ButtonLink href={`/${lang}/plan/new`} size="sm">{t.newPlan}</ButtonLink>
+      </div>
 
       {/* Stat band: hairline-separated, tabular figures so the columns align. */}
       <dl className="mt-8 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-rule bg-rule md:grid-cols-4">

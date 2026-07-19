@@ -148,6 +148,9 @@ export default async function CertificationPage({
           <ButtonLink href={`/${lang}/advisor/${cert.id}`} size="lg">
             {t.askAdvisor}
           </ButtonLink>
+          <ButtonLink href={`/${lang}/plan/new/${cert.id}`} variant="secondary" size="lg">
+            {t.buildYourself}
+          </ButtonLink>
           <ButtonLink href={cert.officialUrl} variant="link" target="_blank" rel="noopener noreferrer">
             {cert.provider} ↗
           </ButtonLink>
