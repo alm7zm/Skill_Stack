@@ -1,10 +1,10 @@
 -- Promote every reviewed resource proposal into the live catalog.
 --
 -- The n8n discovery workflow files new-resource findings into
--- certification_reports as (source 'n8n', field 'resource_new', status 'open'),
--- with `proposal` holding a jsonb copy of the certification_resources row it
+-- certification_findings as (field 'resource_new', status 'open'), with
+-- `proposal` holding a jsonb copy of the certification_resources row it
 -- suggests. This copies those proposals into certification_resources and marks
--- the reports accepted.
+-- the findings accepted.
 --
 -- Run it in the Supabase SQL editor. It is transactional (all-or-nothing) and
 -- safe to re-run: a proposal whose url is already in the catalog is skipped, and
@@ -45,7 +45,7 @@ select distinct on (r.proposal->>'url')
   end,
   r.proposal->>'ai_reason',
   'n8n'
-from public.certification_reports r
+from public.certification_findings r
 where r.field = 'resource_new'
   and r.status = 'open'
   and r.proposal is not null
@@ -58,8 +58,8 @@ where r.field = 'resource_new'
 order by r.proposal->>'url', r.confidence desc nulls last;
 
 -- Resolve the queue. Dups (url already present) are marked accepted too — the
--- resource they wanted is in the catalog, so the report is genuinely settled.
-update public.certification_reports
+-- resource they wanted is in the catalog, so the finding is genuinely settled.
+update public.certification_findings
 set status = 'accepted'
 where field = 'resource_new' and status = 'open';
 
