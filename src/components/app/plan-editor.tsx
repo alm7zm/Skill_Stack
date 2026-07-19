@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { interpolate } from '@/lib/utils';
 import { normalizeWeeks } from '@/lib/plan/reconcile';
-import { savePlan, deletePlan } from '@/app/[lang]/(app)/plan/actions';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { savePlan } from '@/app/[lang]/(app)/plan/actions';
 import type { Locale } from '@/lib/i18n';
 import type { LearningResource } from '@/lib/types';
 import type { EditablePlan, EditableWeek, EditableTopic } from '@/lib/plan/types';
@@ -18,10 +19,9 @@ type Labels = {
   topicHours: string; addTopic: string; removeTopic: string; addWeek: string;
   removeWeek: string; moveUp: string; moveDown: string; duplicateTopic: string;
   resources: string; noResources: string; noTopics: string; save: string; saving: string;
-  cancel: string; delete: string;
+  cancel: string;
   revise: { title: string; placeholder: string; button: string; revising: string; error: string; quota: string };
   unsaved: { title: string; body: string; discard: string; keep: string };
-  deleteConfirm: { title: string; body: string; confirm: string };
 };
 
 const emptyTopic = (): EditableTopic => ({
@@ -68,7 +68,6 @@ export function PlanEditor({
   const [revising, setRevising] = useState(false);
   const [reviseError, setReviseError] = useState<string>();
   const [confirmDiscard, setConfirmDiscard] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
 
   // The snapshot at mount; the draft is "dirty" when the plan or the target date
   // no longer matches what was loaded. Lazy state, not a ref: it is computed once
@@ -341,24 +340,13 @@ export function PlanEditor({
         {reviseError && <p role="alert" className="mt-2 text-sm text-danger">{reviseError}</p>}
       </section>
 
-      {/* Save / cancel / delete — all the plan-level actions in one row. Delete is
-          pushed to the end and only shown for a saved plan (nothing to delete
-          before the first save). */}
+      {/* Save / cancel — delete lives on the plan view page, next to Edit. */}
       {error && <p role="alert" className="mt-6 rounded-sm bg-danger-wash px-3 py-2 text-sm text-danger">{error}</p>}
       <div className="mt-8 flex flex-wrap items-center gap-3 border-t border-rule pt-6">
         <Button type="button" onClick={() => void onSave()} disabled={saving}>
           {saving ? labels.saving : labels.save}
         </Button>
         <Button type="button" variant="ghost" onClick={onCancel}>{labels.cancel}</Button>
-        {planId && (
-          <button
-            type="button"
-            onClick={() => setConfirmDelete(true)}
-            className="ms-auto rounded-md px-3 py-2 text-sm font-medium text-danger hover:bg-danger-wash"
-          >
-            {labels.delete}
-          </button>
-        )}
       </div>
 
       {confirmDiscard && (
@@ -366,25 +354,6 @@ export function PlanEditor({
           labels={labels.unsaved}
           onKeep={() => setConfirmDiscard(false)}
           onDiscard={() => router.back()}
-        />
-      )}
-
-      {confirmDelete && planId && (
-        <ConfirmDialog
-          labels={{
-            title: labels.deleteConfirm.title,
-            body: labels.deleteConfirm.body,
-            discard: labels.deleteConfirm.confirm,
-            keep: labels.cancel,
-          }}
-          onKeep={() => setConfirmDelete(false)}
-          onDiscard={async () => {
-            const res = await deletePlan({ lang, planId });
-            if (res && 'error' in res) {
-              setError(res.error);
-              setConfirmDelete(false);
-            }
-          }}
         />
       )}
     </div>
@@ -435,28 +404,5 @@ function ResourcePicker({
         </ul>
       )}
     </section>
-  );
-}
-
-function ConfirmDialog({
-  labels,
-  onKeep,
-  onDiscard,
-}: {
-  labels: { title: string; body: string; discard: string; keep: string };
-  onKeep: () => void;
-  onDiscard: () => void;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/30 px-6" role="dialog" aria-modal="true">
-      <div className="w-full max-w-sm rounded-lg border border-rule bg-paper-raised p-6 shadow-float">
-        <h2 className="font-display text-lg font-semibold text-ink">{labels.title}</h2>
-        <p className="mt-2 text-sm text-ink-muted">{labels.body}</p>
-        <div className="mt-5 flex justify-end gap-3">
-          <Button type="button" variant="ghost" onClick={onKeep}>{labels.keep}</Button>
-          <Button type="button" onClick={onDiscard}>{labels.discard}</Button>
-        </div>
-      </div>
-    </div>
   );
 }

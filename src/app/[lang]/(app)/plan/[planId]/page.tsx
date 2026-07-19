@@ -9,6 +9,7 @@ import type { LearningResource } from '@/lib/types';
 import { formatDate, formatNumber, interpolate, pluralUnit } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { ButtonLink } from '@/components/ui/button';
+import { DeletePlanButton } from '@/components/app/delete-plan-button';
 import { toggleTopic } from './actions';
 
 export default async function PlanPage({
@@ -80,10 +81,19 @@ export default async function PlanPage({
           </span>
         </div>
 
-        <div className="mt-5">
+        <div className="mt-5 flex items-center gap-2">
           <ButtonLink href={`/${lang}/plan/${plan.row.id}/edit`} variant="secondary" size="sm">
             {t.edit}
           </ButtonLink>
+          <DeletePlanButton
+            lang={lang}
+            planId={plan.row.id}
+            labels={{
+              delete: dict.planEditor.delete,
+              cancel: dict.planEditor.cancel,
+              confirm: dict.planEditor.deleteConfirm,
+            }}
+          />
         </div>
       </header>
 
