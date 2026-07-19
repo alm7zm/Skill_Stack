@@ -41,6 +41,21 @@ export function AppNav({
     signOut: string;
     signingOut: string;
     account: string;
+    report: {
+      menu: string;
+      dialog: {
+        title: string;
+        body: string;
+        label: string;
+        placeholder: string;
+        hint: string;
+        submit: string;
+        sending: string;
+        thanks: string;
+        error: string;
+        cancel: string;
+      };
+    };
   };
   user: { name: string | null; email: string } | null;
   avatar: React.ReactNode;
@@ -106,6 +121,7 @@ export function AppNav({
                 settings: labels.settings,
                 signOut: labels.signOut,
                 signingOut: labels.signingOut,
+                report: labels.report,
               }}
             />
           ) : (

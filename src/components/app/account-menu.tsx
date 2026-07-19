@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { ReportProblemDialog } from '@/components/app/report-problem-dialog';
 import type { Locale } from '@/lib/i18n';
 
 const DEVELOPER_LINKEDIN = 'https://www.linkedin.com/in/hussam-aldossary';
@@ -39,10 +40,26 @@ export function AccountMenu({
     settings: string;
     signOut: string;
     signingOut: string;
+    report: {
+      menu: string;
+      dialog: {
+        title: string;
+        body: string;
+        label: string;
+        placeholder: string;
+        hint: string;
+        submit: string;
+        sending: string;
+        thanks: string;
+        error: string;
+        cancel: string;
+      };
+    };
   };
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const root = useRef<HTMLDivElement>(null);
 
@@ -147,6 +164,18 @@ export function AccountMenu({
                 <path d="M4.5 2.5H9.5V7.5M9.5 2.5L3 9" />
               </svg>
             </a>
+            {/* A button, not a link: it opens a dialog that lives at the menu
+                root so it survives the dropdown closing. */}
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                setReportOpen(true);
+              }}
+              className="block w-full rounded-sm px-2.5 py-2 text-start text-sm text-ink-muted transition-colors hover:bg-paper-sunken hover:text-ink"
+            >
+              {labels.report.menu}
+            </button>
             <MenuLink href={`/${lang}/settings`} onClick={() => setOpen(false)}>
               {labels.settings}
             </MenuLink>
@@ -164,6 +193,13 @@ export function AccountMenu({
           </div>
         </div>
       )}
+
+      {/* Outside the {open} block so it stays mounted after the dropdown closes. */}
+      <ReportProblemDialog
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        labels={labels.report.dialog}
+      />
     </div>
   );
 }

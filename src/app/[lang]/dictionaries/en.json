@@ -49,11 +49,24 @@
     "profile": "Profile",
     "settings": "Settings",
     "developer": "Developer",
+    "report": "Report a problem",
     "signIn": "Sign in",
     "signOut": "Sign out",
     "getStarted": "Get started",
     "searchPlaceholder": "Search certifications",
     "signingOut": "Signing out"
+  },
+  "reportProblem": {
+    "title": "Report a problem",
+    "body": "Something not working right? Tell the developer and it gets looked at.",
+    "label": "What happened",
+    "placeholder": "Describe the problem — what you did and what went wrong.",
+    "hint": "Up to 200 characters.",
+    "submit": "Send report",
+    "sending": "Sending",
+    "thanks": "Thanks — we'll take a look.",
+    "error": "Couldn't send that. Please try again.",
+    "cancel": "Cancel"
   },
   "landing": {
     "hero": {

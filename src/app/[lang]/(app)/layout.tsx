@@ -48,6 +48,7 @@ export default async function AppLayout({
           signOut: dict.nav.signOut,
           signingOut: dict.nav.signingOut,
           account: dict.a11y.accountMenu,
+          report: { menu: dict.nav.report, dialog: dict.reportProblem },
         }}
         user={user ? { name, email: user.email ?? '' } : null}
         avatar={<Avatar name={name} email={user?.email} src={avatarUrl} size={32} />}
