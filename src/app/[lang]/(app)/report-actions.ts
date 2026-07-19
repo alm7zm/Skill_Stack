@@ -8,7 +8,10 @@ import { createClient, getUser } from '@/lib/supabase/server';
  * Mirrors reportCertification, but not tied to a certification — it lands in
  * app_reports. The 200-char cap matches the table's check constraint.
  */
-const schema = z.object({ message: z.string().trim().min(1).max(200) });
+const schema = z.object({
+  category: z.enum(['bug', 'content', 'idea', 'other']),
+  message: z.string().trim().min(1).max(200),
+});
 
 export type ReportProblemResult = { ok: true } | { ok: false; error: 'auth' | 'invalid' | 'failed' };
 
@@ -16,7 +19,10 @@ export async function reportProblem(formData: FormData): Promise<ReportProblemRe
   const user = await getUser();
   if (!user) return { ok: false, error: 'auth' };
 
-  const parsed = schema.safeParse({ message: formData.get('message') });
+  const parsed = schema.safeParse({
+    category: formData.get('category'),
+    message: formData.get('message'),
+  });
   if (!parsed.success) return { ok: false, error: 'invalid' };
 
   const supabase = await createClient();
@@ -24,6 +30,7 @@ export async function reportProblem(formData: FormData): Promise<ReportProblemRe
   // forged id fails the policy rather than writing under someone else's name.
   const { error } = await supabase.from('app_reports').insert({
     user_id: user.id,
+    category: parsed.data.category,
     message: parsed.data.message,
   });
 

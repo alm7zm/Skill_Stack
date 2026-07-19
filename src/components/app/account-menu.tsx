@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { ReportProblemDialog } from '@/components/app/report-problem-dialog';
+import { ReportProblemDialog, type ReportDialogLabels } from '@/components/app/report-problem-dialog';
 import type { Locale } from '@/lib/i18n';
 
 const DEVELOPER_LINKEDIN = 'https://www.linkedin.com/in/hussam-aldossary';
@@ -40,21 +40,7 @@ export function AccountMenu({
     settings: string;
     signOut: string;
     signingOut: string;
-    report: {
-      menu: string;
-      dialog: {
-        title: string;
-        body: string;
-        label: string;
-        placeholder: string;
-        hint: string;
-        submit: string;
-        sending: string;
-        thanks: string;
-        error: string;
-        cancel: string;
-      };
-    };
+    report: { menu: string; dialog: ReportDialogLabels };
   };
 }) {
   const router = useRouter();

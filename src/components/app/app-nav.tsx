@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { Logo } from './logo';
 import { LanguageSwitcher } from './language-switcher';
 import { AccountMenu } from './account-menu';
+import type { ReportDialogLabels } from './report-problem-dialog';
 import { cn } from '@/lib/utils';
 import { pathWithoutLocale, type Locale } from '@/lib/i18n';
 
@@ -41,21 +42,7 @@ export function AppNav({
     signOut: string;
     signingOut: string;
     account: string;
-    report: {
-      menu: string;
-      dialog: {
-        title: string;
-        body: string;
-        label: string;
-        placeholder: string;
-        hint: string;
-        submit: string;
-        sending: string;
-        thanks: string;
-        error: string;
-        cancel: string;
-      };
-    };
+    report: { menu: string; dialog: ReportDialogLabels };
   };
   user: { name: string | null; email: string } | null;
   avatar: React.ReactNode;

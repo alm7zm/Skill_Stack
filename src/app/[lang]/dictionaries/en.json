@@ -58,10 +58,22 @@
   },
   "reportProblem": {
     "title": "Report a problem",
-    "body": "Something not working right? Tell the developer and it gets looked at.",
-    "label": "What happened",
-    "placeholder": "Describe the problem — what you did and what went wrong.",
-    "hint": "Up to 200 characters.",
+    "body": "Found a bug or something wrong? Tell the developer and it gets looked at.",
+    "categoryLabel": "What's wrong?",
+    "categories": {
+      "bug": "Something is broken",
+      "content": "Wrong or missing information",
+      "idea": "A suggestion",
+      "other": "Something else"
+    },
+    "messageLabel": "Tell us more",
+    "placeholders": {
+      "bug": "What did you do, and what happened instead?",
+      "content": "What's wrong, and what should it say?",
+      "idea": "What would make this better?",
+      "other": "Tell us what's on your mind."
+    },
+    "charCount": "Characters used",
     "submit": "Send report",
     "sending": "Sending",
     "thanks": "Thanks — we'll take a look.",

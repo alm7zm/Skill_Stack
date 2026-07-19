@@ -12,6 +12,9 @@ create table if not exists public.app_reports (
   -- a user should not erase a problem they took the time to flag.
   user_id uuid references public.profiles(id) on delete set null,
 
+  -- What kind of problem, so triage can sort at a glance — mirrors the "What's
+  -- wrong?" picker in certification_reports, but for the app as a whole.
+  category text not null check (category in ('bug', 'content', 'idea', 'other')),
   message text not null check (char_length(trim(message)) between 1 and 200),
   status text not null default 'open' check (status in ('open', 'resolved')),
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
