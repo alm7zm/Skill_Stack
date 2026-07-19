@@ -236,6 +236,7 @@
   },
   "dashboard": {
     "title": "Dashboard",
+    "newPlan": "New plan",
     "streak": "Day streak",
     "completed": "Topics done",
     "hoursLogged": "Hours planned",
@@ -271,6 +272,7 @@
     "noPrerequisites": "No formal prerequisites.",
     "startPlan": "Plan this certification",
     "askAdvisor": "Ask the advisor",
+    "buildYourself": "Build it yourself",
     "verified": "Exam details last checked {date}. Providers change prices — confirm on {provider} before you pay.",
     "report": {
       "open": "Something wrong?",
@@ -346,7 +348,55 @@
     "resync": "Update calendar",
     "notFound": "That plan doesn't exist, or it isn't yours.",
     "resources": "Resources",
-    "paid": "Paid"
+    "paid": "Paid",
+    "edit": "Edit plan",
+    "new": {
+      "title": "Build a plan",
+      "subtitle": "Pick a certification to plan by hand.",
+      "pick": "Choose a certification"
+    }
+  },
+  "planEditor": {
+    "newTitle": "New plan",
+    "editTitle": "Edit plan",
+    "summary": "Summary",
+    "summaryPlaceholder": "A sentence on how this plan is shaped (optional).",
+    "targetDate": "Exam target date",
+    "week": "Week {n}",
+    "weekTitle": "Week title",
+    "weekHours": "Hours",
+    "reviewWeek": "Review week",
+    "practiceExam": "Has practice exam",
+    "topicTitle": "Topic",
+    "topicDescription": "What to do this session",
+    "topicHours": "Hours",
+    "addTopic": "Add topic",
+    "removeTopic": "Remove topic",
+    "addWeek": "Add week",
+    "removeWeek": "Remove week",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "duplicateTopic": "Duplicate topic",
+    "resources": "Resources",
+    "noResources": "No resources in the catalog for this certification.",
+    "noTopics": "No topics yet — add one.",
+    "save": "Save plan",
+    "saving": "Saving",
+    "cancel": "Cancel",
+    "revise": {
+      "title": "Ask the advisor to change it",
+      "placeholder": "e.g. compress to 8 weeks, add more hands-on labs",
+      "button": "Revise",
+      "revising": "Revising",
+      "error": "The advisor couldn't revise this. Try again.",
+      "quota": "The advisor has hit its daily limit with Google. Try again in {seconds}s."
+    },
+    "unsaved": {
+      "title": "Discard your changes?",
+      "body": "You have unsaved edits to this plan.",
+      "discard": "Discard changes",
+      "keep": "Continue editing"
+    }
   },
   "profile": {
     "title": "Profile",
