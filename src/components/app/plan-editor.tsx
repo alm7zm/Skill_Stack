@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { interpolate } from '@/lib/utils';
 import { normalizeWeeks, weekHours } from '@/lib/plan/reconcile';
+import { MAX_INSTRUCTION_CHARS } from '@/lib/plan/schema';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { savePlan } from '@/app/[lang]/(app)/plan/actions';
 import type { Locale } from '@/lib/i18n';
@@ -20,7 +21,7 @@ type Labels = {
   removeWeek: string; moveUp: string; moveDown: string; duplicateTopic: string;
   resources: string; noResources: string; noTopics: string; save: string; saving: string;
   cancel: string;
-  revise: { title: string; placeholder: string; button: string; revising: string; error: string; quota: string };
+  revise: { title: string; placeholder: string; button: string; revising: string; error: string; quota: string; charCount: string };
   unsaved: { title: string; body: string; discard: string; keep: string };
 };
 
@@ -331,13 +332,21 @@ export function PlanEditor({
             onChange={(e) => setInstruction(e.target.value)}
             placeholder={labels.revise.placeholder}
             disabled={revising}
-            maxLength={2000}
+            maxLength={MAX_INSTRUCTION_CHARS}
             className="h-10 min-w-64 flex-1 rounded-md border border-rule bg-paper-raised px-3 text-sm text-ink placeholder:text-ink-faint"
           />
           <Button type="button" variant="secondary" onClick={onRevise} disabled={revising || !instruction.trim()}>
             {revising ? labels.revise.revising : labels.revise.button}
           </Button>
         </div>
+        <span
+          title={labels.revise.charCount}
+          className={`tabular mt-2 block text-end text-xs ${
+            instruction.length >= MAX_INSTRUCTION_CHARS ? 'text-danger' : 'text-ink-faint'
+          }`}
+        >
+          {instruction.length}/{MAX_INSTRUCTION_CHARS}
+        </span>
         {reviseError && <p role="alert" className="mt-2 text-sm text-danger">{reviseError}</p>}
       </section>
 

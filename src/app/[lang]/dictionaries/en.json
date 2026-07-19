@@ -318,10 +318,13 @@
       },
       "messageLabel": "What should it say?",
       "messagePlaceholder": "The exam is now $175, not $150 — I paid it last week.",
+      "charCount": "Characters used",
       "submit": "Send report",
       "sending": "Sending",
-      "thanks": "Thank you. We'll check it against the provider.",
+      "sentTitle": "Report sent",
+      "sentBody": "Thank you. We'll check it against the provider.",
       "signIn": "Sign in to send a report.",
+      "close": "Close",
       "error": "That didn't send. Please try again."
     }
   },
@@ -425,7 +428,8 @@
       "button": "Revise",
       "revising": "Revising",
       "error": "The advisor couldn't revise this. Try again.",
-      "quota": "The advisor has hit its daily limit with Google. Try again in {seconds}s."
+      "quota": "The advisor has hit its daily limit with Google. Try again in {seconds}s.",
+      "charCount": "Characters used"
     },
     "unsaved": {
       "title": "Discard your changes?",

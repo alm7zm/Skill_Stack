@@ -43,10 +43,13 @@ export const savePlanSchema = storedPlanSchema
   .refine(atLeastOneTopic, { message: 'A plan needs at least one topic.' })
   .refine(uniqueTopicIds, { message: 'Topic ids must be unique.' });
 
+/** Cap on the plain-language edit instruction — matches the advisor chat input. */
+export const MAX_INSTRUCTION_CHARS = 200;
+
 export const editRequestSchema = z.object({
   certId: z.string().min(1).max(100),
   locale: z.enum(['en', 'ar']),
-  instruction: z.string().min(1).max(2000),
+  instruction: z.string().trim().min(1).max(MAX_INSTRUCTION_CHARS),
   plan: storedPlanSchema,
 });
 
