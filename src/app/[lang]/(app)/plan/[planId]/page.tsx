@@ -4,6 +4,7 @@ import { getDictionary } from '../../../dictionaries';
 import { isLocale } from '@/lib/i18n';
 import { getUser } from '@/lib/supabase/server';
 import { getPlan } from '@/lib/data/queries';
+import { weekHours } from '@/lib/plan/reconcile';
 import { isCalendarConnected } from '@/app/[lang]/(app)/settings/calendar-status';
 import { getResourcesByIds } from '@/lib/data/resources';
 import { siteOf } from '@/lib/resource-prefs';
@@ -141,8 +142,8 @@ export default async function PlanPage({
                 <span className="ms-3 text-ink">{week.title}</span>
               </h2>
               <span className="tabular text-xs text-ink-faint">
-                {formatNumber(week.estimatedHours, lang)}{' '}
-                {pluralUnit(dict.common.hours, week.estimatedHours, lang)}
+                {formatNumber(weekHours(week.topics), lang)}{' '}
+                {pluralUnit(dict.common.hours, weekHours(week.topics), lang)}
               </span>
             </div>
 

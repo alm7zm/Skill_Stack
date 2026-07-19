@@ -171,8 +171,16 @@ export async function getDashboard(): Promise<DashboardData> {
     withProgress(p, byPlan.get(p.id) ?? [], byId.get(p.certification_id))
   );
 
+  // Hours are summed from topics, not from the stored week total — a plan the
+  // advisor generated (or one saved before hours became derived) may carry a
+  // stale week.estimatedHours, but its topic hours are always the truth.
   const hoursPlanned = withProgressList.reduce(
-    (sum, p) => sum + (p.row.plan?.weeks.reduce((h, w) => h + w.estimatedHours, 0) ?? 0),
+    (sum, p) =>
+      sum +
+      (p.row.plan?.weeks.reduce(
+        (h, w) => h + w.topics.reduce((th, t) => th + (t.estimatedHours || 0), 0),
+        0
+      ) ?? 0),
     0
   );
   const topicsDone = withProgressList.reduce((sum, p) => sum + p.done, 0);

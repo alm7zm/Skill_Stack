@@ -1,8 +1,21 @@
 import type { EditableWeek, EditablePlan } from './types.ts';
 
-/** Renumber weeks 1..N in array order, so reordering leaves clean numbers. */
+/**
+ * Renumber weeks 1..N in array order, and derive each week's hours from its
+ * topics. Week hours are never entered by hand — a week is exactly the sum of
+ * the work inside it, so this is the one place that total is computed.
+ */
 export function normalizeWeeks(weeks: EditableWeek[]): EditableWeek[] {
-  return weeks.map((w, i) => ({ ...w, weekNumber: i + 1 }));
+  return weeks.map((w, i) => ({
+    ...w,
+    weekNumber: i + 1,
+    estimatedHours: weekHours(w.topics),
+  }));
+}
+
+/** A week's hours: the sum of its topics' hours. */
+export function weekHours(topics: { estimatedHours: number }[]): number {
+  return topics.reduce((sum, t) => sum + (t.estimatedHours || 0), 0);
 }
 
 /** Every topic id, in order. Throws on a duplicate — the DB has a unique

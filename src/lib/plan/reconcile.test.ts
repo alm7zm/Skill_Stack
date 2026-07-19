@@ -20,6 +20,19 @@ test('normalizeWeeks renumbers to sequential 1..N in array order', () => {
   assert.deepEqual(out.map((w) => w.weekNumber), [1, 2, 3]);
 });
 
+test('normalizeWeeks derives week hours from the sum of its topic hours', () => {
+  const [out] = normalizeWeeks([
+    week({
+      estimatedHours: 99, // stale hand-entered value is overwritten
+      topics: [
+        { id: 'a', title: 't', description: '', estimatedHours: 3 },
+        { id: 'b', title: 't2', description: '', estimatedHours: 2 },
+      ],
+    }),
+  ]);
+  assert.equal(out.estimatedHours, 5);
+});
+
 test('collectTopicIds returns every id in order', () => {
   const plan: EditablePlan = {
     weeks: [

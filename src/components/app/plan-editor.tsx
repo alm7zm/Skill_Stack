@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { interpolate } from '@/lib/utils';
-import { normalizeWeeks } from '@/lib/plan/reconcile';
+import { normalizeWeeks, weekHours } from '@/lib/plan/reconcile';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { savePlan } from '@/app/[lang]/(app)/plan/actions';
 import type { Locale } from '@/lib/i18n';
@@ -207,17 +207,18 @@ export function PlanEditor({
                   className="h-9 rounded-md border border-rule bg-paper px-3 text-sm text-ink placeholder:text-ink-faint"
                 />
               </label>
-              <label className="flex flex-col gap-1">
+              {/* Read-only: a week's hours are the sum of its topics' hours, not
+                  entered by hand. It updates as topic hours change. */}
+              <div className="flex flex-col gap-1">
                 <span className="text-xs font-medium text-ink-faint">{labels.weekHours}</span>
-                <input
-                  type="number"
-                  min={0}
+                <div
                   dir="ltr"
-                  value={week.estimatedHours}
-                  onChange={(e) => patchWeek(wi, { estimatedHours: Number(e.target.value) })}
-                  className="tabular h-9 w-24 rounded-md border border-rule bg-paper px-3 text-sm text-ink"
-                />
-              </label>
+                  aria-live="polite"
+                  className="tabular flex h-9 w-24 items-center rounded-md border border-rule bg-paper-sunken px-3 text-sm text-ink-muted"
+                >
+                  {weekHours(week.topics)}
+                </div>
+              </div>
             </div>
 
             <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2">
