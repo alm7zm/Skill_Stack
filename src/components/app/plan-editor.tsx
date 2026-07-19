@@ -11,9 +11,10 @@ import type { LearningResource } from '@/lib/types';
 import type { EditablePlan, EditableWeek, EditableTopic } from '@/lib/plan/types';
 
 type Labels = {
-  newTitle: string; editTitle: string; summary: string; summaryPlaceholder: string;
-  targetDate: string; week: string; weekTitle: string; weekHours: string;
-  reviewWeek: string; practiceExam: string; topicTitle: string; topicDescription: string;
+  newTitle: string; editTitle: string; intro: string; summary: string; summaryPlaceholder: string;
+  targetDate: string; week: string; weekTitle: string; weekTitlePlaceholder: string; weekHours: string;
+  reviewWeek: string; practiceExam: string; topics: string; topicTitle: string;
+  topicTitlePlaceholder: string; topicDescription: string;
   topicHours: string; addTopic: string; removeTopic: string; addWeek: string;
   removeWeek: string; moveUp: string; moveDown: string; duplicateTopic: string;
   resources: string; noResources: string; noTopics: string; save: string; saving: string;
@@ -30,9 +31,9 @@ const emptyTopic = (): EditableTopic => ({
   estimatedHours: 1,
 });
 
-const emptyWeek = (n: number, title: string): EditableWeek => ({
+const emptyWeek = (n: number): EditableWeek => ({
   weekNumber: n,
-  title,
+  title: '',
   estimatedHours: 0,
   hasPracticeExam: false,
   isReviewWeek: false,
@@ -151,6 +152,7 @@ export function PlanEditor({
       <h1 className="font-display text-3xl font-semibold text-ink">
         {planId ? labels.editTitle : labels.newTitle}
       </h1>
+      <p className="prose-measure mt-2 text-sm text-ink-muted">{labels.intro}</p>
 
       {/* Summary + target date */}
       <div className="mt-6 flex flex-col gap-4">
@@ -186,26 +188,40 @@ export function PlanEditor({
               <div className="flex items-center gap-1">
                 <IconBtn label={labels.moveUp} onClick={() => setWeeks(move(plan.weeks, wi, wi - 1))}>↑</IconBtn>
                 <IconBtn label={labels.moveDown} onClick={() => setWeeks(move(plan.weeks, wi, wi + 1))}>↓</IconBtn>
-                <IconBtn label={labels.removeWeek} onClick={() => setWeeks(plan.weeks.filter((_, i) => i !== wi))}>✕</IconBtn>
+                <button
+                  type="button"
+                  onClick={() => setWeeks(plan.weeks.filter((_, i) => i !== wi))}
+                  className="ms-1 rounded-md px-2 py-1.5 text-xs font-medium text-danger hover:bg-danger-wash"
+                >
+                  {labels.removeWeek}
+                </button>
               </div>
             </div>
 
-            <div className="mt-3 flex flex-wrap gap-3">
-              <input
-                aria-label={labels.weekTitle}
-                value={week.title}
-                onChange={(e) => patchWeek(wi, { title: e.target.value })}
-                placeholder={labels.weekTitle}
-                className="h-9 min-w-56 flex-1 rounded-md border border-rule bg-paper px-3 text-sm text-ink"
-              />
-              <input
-                aria-label={labels.weekHours}
-                type="number"
-                min={0}
-                value={week.estimatedHours}
-                onChange={(e) => patchWeek(wi, { estimatedHours: Number(e.target.value) })}
-                className="tabular h-9 w-20 rounded-md border border-rule bg-paper px-3 text-sm text-ink"
-              />
+            <div className="mt-4 flex flex-wrap items-end gap-4">
+              <label className="flex min-w-56 flex-1 flex-col gap-1">
+                <span className="text-xs font-medium text-ink-faint">{labels.weekTitle}</span>
+                <input
+                  value={week.title}
+                  onChange={(e) => patchWeek(wi, { title: e.target.value })}
+                  placeholder={labels.weekTitlePlaceholder}
+                  className="h-9 rounded-md border border-rule bg-paper px-3 text-sm text-ink placeholder:text-ink-faint"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-ink-faint">{labels.weekHours}</span>
+                <input
+                  type="number"
+                  min={0}
+                  dir="ltr"
+                  value={week.estimatedHours}
+                  onChange={(e) => patchWeek(wi, { estimatedHours: Number(e.target.value) })}
+                  className="tabular h-9 w-24 rounded-md border border-rule bg-paper px-3 text-sm text-ink"
+                />
+              </label>
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2">
               <label className="flex items-center gap-1.5 text-sm text-ink-muted">
                 <input type="checkbox" checked={week.isReviewWeek} onChange={(e) => patchWeek(wi, { isReviewWeek: e.target.checked })} />
                 {labels.reviewWeek}
@@ -217,41 +233,49 @@ export function PlanEditor({
             </div>
 
             {/* Topics */}
-            <ul className="mt-4 flex flex-col gap-3">
+            <p className="mt-5 text-xs font-medium uppercase tracking-wider text-ink-faint">{labels.topics}</p>
+            <ul className="mt-2 flex flex-col gap-3">
               {week.topics.length === 0 && <li className="text-xs text-ink-faint">{labels.noTopics}</li>}
               {week.topics.map((topic, ti) => (
                 <li key={topic.id} className="rounded-md border border-rule/60 bg-paper p-3">
-                  <div className="flex flex-wrap gap-2">
-                    <input
-                      aria-label={labels.topicTitle}
-                      value={topic.title}
-                      onChange={(e) => patchTopic(wi, ti, { title: e.target.value })}
-                      placeholder={labels.topicTitle}
-                      className="h-9 min-w-48 flex-1 rounded-md border border-rule bg-paper-raised px-3 text-sm text-ink"
-                    />
-                    <input
-                      aria-label={labels.topicHours}
-                      type="number"
-                      min={0}
-                      value={topic.estimatedHours}
-                      onChange={(e) => patchTopic(wi, ti, { estimatedHours: Number(e.target.value) })}
-                      className="tabular h-9 w-20 rounded-md border border-rule bg-paper-raised px-3 text-sm text-ink"
-                    />
-                    <IconBtn label={labels.moveUp} onClick={() => patchWeek(wi, { topics: move(week.topics, ti, ti - 1) })}>↑</IconBtn>
-                    <IconBtn label={labels.moveDown} onClick={() => patchWeek(wi, { topics: move(week.topics, ti, ti + 1) })}>↓</IconBtn>
-                    <IconBtn
-                      label={labels.duplicateTopic}
-                      onClick={() =>
-                        patchWeek(wi, {
-                          topics: [
-                            ...week.topics.slice(0, ti + 1),
-                            { ...topic, id: crypto.randomUUID() },
-                            ...week.topics.slice(ti + 1),
-                          ],
-                        })
-                      }
-                    >⧉</IconBtn>
-                    <IconBtn label={labels.removeTopic} onClick={() => patchWeek(wi, { topics: week.topics.filter((_, i) => i !== ti) })}>✕</IconBtn>
+                  <div className="flex flex-wrap items-end gap-2">
+                    <label className="flex min-w-48 flex-1 flex-col gap-1">
+                      <span className="text-xs font-medium text-ink-faint">{labels.topicTitle}</span>
+                      <input
+                        value={topic.title}
+                        onChange={(e) => patchTopic(wi, ti, { title: e.target.value })}
+                        placeholder={labels.topicTitlePlaceholder}
+                        className="h-9 rounded-md border border-rule bg-paper-raised px-3 text-sm text-ink placeholder:text-ink-faint"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-1">
+                      <span className="text-xs font-medium text-ink-faint">{labels.topicHours}</span>
+                      <input
+                        type="number"
+                        min={0}
+                        dir="ltr"
+                        value={topic.estimatedHours}
+                        onChange={(e) => patchTopic(wi, ti, { estimatedHours: Number(e.target.value) })}
+                        className="tabular h-9 w-24 rounded-md border border-rule bg-paper-raised px-3 text-sm text-ink"
+                      />
+                    </label>
+                    <div className="flex items-center gap-1 pb-0.5">
+                      <IconBtn label={labels.moveUp} onClick={() => patchWeek(wi, { topics: move(week.topics, ti, ti - 1) })}>↑</IconBtn>
+                      <IconBtn label={labels.moveDown} onClick={() => patchWeek(wi, { topics: move(week.topics, ti, ti + 1) })}>↓</IconBtn>
+                      <IconBtn
+                        label={labels.duplicateTopic}
+                        onClick={() =>
+                          patchWeek(wi, {
+                            topics: [
+                              ...week.topics.slice(0, ti + 1),
+                              { ...topic, id: crypto.randomUUID() },
+                              ...week.topics.slice(ti + 1),
+                            ],
+                          })
+                        }
+                      >⧉</IconBtn>
+                      <IconBtn label={labels.removeTopic} onClick={() => patchWeek(wi, { topics: week.topics.filter((_, i) => i !== ti) })}>✕</IconBtn>
+                    </div>
                   </div>
                   <textarea
                     aria-label={labels.topicDescription}
@@ -292,12 +316,7 @@ export function PlanEditor({
 
       <button
         type="button"
-        onClick={() =>
-          setWeeks([
-            ...plan.weeks,
-            emptyWeek(plan.weeks.length + 1, interpolate(labels.week, { n: String(plan.weeks.length + 1) })),
-          ])
-        }
+        onClick={() => setWeeks([...plan.weeks, emptyWeek(plan.weeks.length + 1)])}
         className="mt-6 rounded-md border border-rule bg-paper-raised px-4 py-2 text-sm font-medium text-ink hover:border-rule-strong"
       >
         + {labels.addWeek}
@@ -322,28 +341,25 @@ export function PlanEditor({
         {reviseError && <p role="alert" className="mt-2 text-sm text-danger">{reviseError}</p>}
       </section>
 
-      {/* Save / cancel */}
+      {/* Save / cancel / delete — all the plan-level actions in one row. Delete is
+          pushed to the end and only shown for a saved plan (nothing to delete
+          before the first save). */}
       {error && <p role="alert" className="mt-6 rounded-sm bg-danger-wash px-3 py-2 text-sm text-danger">{error}</p>}
-      <div className="mt-6 flex items-center gap-3">
+      <div className="mt-8 flex flex-wrap items-center gap-3 border-t border-rule pt-6">
         <Button type="button" onClick={() => void onSave()} disabled={saving}>
           {saving ? labels.saving : labels.save}
         </Button>
         <Button type="button" variant="ghost" onClick={onCancel}>{labels.cancel}</Button>
-      </div>
-
-      {/* Delete only exists for a saved plan — there is nothing to delete before
-          the first save. */}
-      {planId && (
-        <div className="mt-10 border-t border-rule pt-6">
+        {planId && (
           <button
             type="button"
             onClick={() => setConfirmDelete(true)}
-            className="text-sm font-medium text-danger hover:underline"
+            className="ms-auto rounded-md px-3 py-2 text-sm font-medium text-danger hover:bg-danger-wash"
           >
             {labels.delete}
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       {confirmDiscard && (
         <ConfirmDialog
