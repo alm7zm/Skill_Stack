@@ -6,7 +6,7 @@ import { getCertificationById } from '@/lib/data/certifications';
 import { getProfile } from '@/lib/data/queries';
 import { formatCurrency, formatNumber, pluralUnit } from '@/lib/utils';
 import { AdvisorChat } from '@/components/app/advisor-chat';
-import { MAX_CHARS } from '@/lib/ai/advisor';
+import { MAX_INPUT_CHARS } from '@/lib/ai/advisor';
 
 export default async function AdvisorPage({
   params,
@@ -73,7 +73,7 @@ export default async function AdvisorPage({
         <AdvisorChat
           certId={cert.id}
           lang={lang}
-          maxChars={MAX_CHARS}
+          maxChars={MAX_INPUT_CHARS}
           labels={{
             placeholder: t.placeholder,
             send: t.send,

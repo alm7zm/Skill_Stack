@@ -343,17 +343,21 @@ export function planPrompt(
  * ------------------------------------------------------------------------ */
 
 const MAX_MESSAGES = 40;
+// Assistant replies in the history are paragraphs, so they keep the generous
+// cap. A user's own turn is capped much tighter — enforced here and mirrored by
+// the input box's maxLength, so a browser cannot spend tokens past the limit.
 export const MAX_CHARS = 4000;
+export const MAX_INPUT_CHARS = 200;
 
 export const chatRequestSchema = z.object({
   certId: z.string().min(1).max(100),
   locale: z.enum(['en', 'ar']),
   messages: z
     .array(
-      z.object({
-        role: z.enum(['user', 'assistant']),
-        content: z.string().min(1).max(MAX_CHARS),
-      })
+      z.discriminatedUnion('role', [
+        z.object({ role: z.literal('user'), content: z.string().min(1).max(MAX_INPUT_CHARS) }),
+        z.object({ role: z.literal('assistant'), content: z.string().min(1).max(MAX_CHARS) }),
+      ])
     )
     .min(1)
     .max(MAX_MESSAGES),
