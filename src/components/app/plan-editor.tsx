@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { interpolate } from '@/lib/utils';
 import { normalizeWeeks } from '@/lib/plan/reconcile';
-import { savePlan } from '@/app/[lang]/(app)/plan/actions';
+import { savePlan, deletePlan } from '@/app/[lang]/(app)/plan/actions';
 import type { Locale } from '@/lib/i18n';
 import type { LearningResource } from '@/lib/types';
 import type { EditablePlan, EditableWeek, EditableTopic } from '@/lib/plan/types';
@@ -17,9 +17,10 @@ type Labels = {
   topicHours: string; addTopic: string; removeTopic: string; addWeek: string;
   removeWeek: string; moveUp: string; moveDown: string; duplicateTopic: string;
   resources: string; noResources: string; noTopics: string; save: string; saving: string;
-  cancel: string;
+  cancel: string; delete: string;
   revise: { title: string; placeholder: string; button: string; revising: string; error: string; quota: string };
   unsaved: { title: string; body: string; discard: string; keep: string };
+  deleteConfirm: { title: string; body: string; confirm: string };
 };
 
 const emptyTopic = (): EditableTopic => ({
@@ -66,6 +67,7 @@ export function PlanEditor({
   const [revising, setRevising] = useState(false);
   const [reviseError, setReviseError] = useState<string>();
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   // The snapshot at mount; the draft is "dirty" when the plan or the target date
   // no longer matches what was loaded. Lazy state, not a ref: it is computed once
@@ -329,11 +331,44 @@ export function PlanEditor({
         <Button type="button" variant="ghost" onClick={onCancel}>{labels.cancel}</Button>
       </div>
 
+      {/* Delete only exists for a saved plan — there is nothing to delete before
+          the first save. */}
+      {planId && (
+        <div className="mt-10 border-t border-rule pt-6">
+          <button
+            type="button"
+            onClick={() => setConfirmDelete(true)}
+            className="text-sm font-medium text-danger hover:underline"
+          >
+            {labels.delete}
+          </button>
+        </div>
+      )}
+
       {confirmDiscard && (
         <ConfirmDialog
           labels={labels.unsaved}
           onKeep={() => setConfirmDiscard(false)}
           onDiscard={() => router.back()}
+        />
+      )}
+
+      {confirmDelete && planId && (
+        <ConfirmDialog
+          labels={{
+            title: labels.deleteConfirm.title,
+            body: labels.deleteConfirm.body,
+            discard: labels.deleteConfirm.confirm,
+            keep: labels.cancel,
+          }}
+          onKeep={() => setConfirmDelete(false)}
+          onDiscard={async () => {
+            const res = await deletePlan({ lang, planId });
+            if (res && 'error' in res) {
+              setError(res.error);
+              setConfirmDelete(false);
+            }
+          }}
         />
       )}
     </div>

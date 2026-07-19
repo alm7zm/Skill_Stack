@@ -273,6 +273,7 @@
     "startPlan": "Plan this certification",
     "askAdvisor": "Ask the advisor",
     "buildYourself": "Build it yourself",
+    "viewPlan": "View plan",
     "verified": "Exam details last checked {date}. Providers change prices — confirm on {provider} before you pay.",
     "report": {
       "open": "Something wrong?",
@@ -353,7 +354,8 @@
     "new": {
       "title": "Build a plan",
       "subtitle": "Pick a certification to plan by hand.",
-      "pick": "Choose a certification"
+      "planned": "Planned",
+      "noMatch": "No certifications match."
     }
   },
   "planEditor": {
@@ -396,6 +398,12 @@
       "body": "You have unsaved edits to this plan.",
       "discard": "Discard changes",
       "keep": "Continue editing"
+    },
+    "delete": "Delete plan",
+    "deleteConfirm": {
+      "title": "Delete this plan?",
+      "body": "This removes the plan and all its progress. It can't be undone.",
+      "confirm": "Delete plan"
     }
   },
   "profile": {

@@ -71,6 +71,21 @@ export async function POST(req: Request) {
     return Response.json({ error: 'unknown certification' }, { status: 404 });
   }
 
+  const supabase = await createClient();
+
+  // One plan per cert: if the user already has one, don't spend a generation on a
+  // second — send them to it. The cert page hides this entry once a plan exists,
+  // so this guards the direct-URL path, and the unique constraint backs it up.
+  const { data: existingPlan } = await supabase
+    .from('study_plans')
+    .select('id')
+    .eq('certification_id', cert.id)
+    .limit(1)
+    .maybeSingle();
+  if (existingPlan) {
+    return Response.json({ planId: existingPlan.id, recommended: true });
+  }
+
   // Budget filtering happens before the model sees the list, so "free only" is
   // a fact about what exists rather than an instruction it might skip.
   const offered = resourcesForBudget(
@@ -109,8 +124,6 @@ export async function POST(req: Request) {
     ...week,
     resourceIds: [...new Set(week.resourceIds ?? [])].filter((id) => allowed.has(id)),
   }));
-
-  const supabase = await createClient();
 
   // user_id is set explicitly because the insert policy checks
   // auth.uid() = user_id; RLS rejects any other value, so this cannot be forged.

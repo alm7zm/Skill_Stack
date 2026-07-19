@@ -78,3 +78,23 @@ export async function savePlan(input: SavePlanInput): Promise<{ error: string } 
   revalidatePath('/[lang]/dashboard', 'page');
   redirect(`/${input.lang}/plan/${savedId}`);
 }
+
+/**
+ * Delete a plan and all its progress. Topic rows cascade with the plan
+ * (study_plan_topics FK is on delete cascade), and the delete policy scopes it to
+ * the owner, so no user_id check is needed here. Returns { error } on failure;
+ * redirects to the dashboard on success.
+ */
+export async function deletePlan(input: { lang: string; planId: string }): Promise<{ error: string } | void> {
+  if (!isLocale(input.lang)) return { error: 'Invalid request.' };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from('study_plans').delete().eq('id', input.planId);
+  if (error) {
+    console.error('deletePlan failed:', error.message);
+    return { error: 'Could not delete the plan. Please try again.' };
+  }
+
+  revalidatePath('/[lang]/dashboard', 'page');
+  redirect(`/${input.lang}/dashboard`);
+}

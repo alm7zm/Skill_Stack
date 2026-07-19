@@ -5,7 +5,7 @@ import { getDictionary } from '../../../dictionaries';
 import { isLocale } from '@/lib/i18n';
 import { getCertificationById } from '@/lib/data/certifications';
 import { getResourcesForCertification } from '@/lib/data/resources';
-import { getUserCurrency } from '@/lib/data/queries';
+import { getUserCurrency, getPlanIdForCert } from '@/lib/data/queries';
 import { siteOf } from '@/lib/resource-prefs';
 import { getUser } from '@/lib/supabase/server';
 import {
@@ -77,11 +77,12 @@ export default async function CertificationPage({
   // signed-out visitor is sent to sign in *before* writing a report, rather than
   // after — a form action resets the form, so asking afterwards discards
   // everything they just typed.
-  const [dict, resources, user, currency] = await Promise.all([
+  const [dict, resources, user, currency, existingPlanId] = await Promise.all([
     getDictionary(lang),
     getResourcesForCertification(cert.id),
     getUser(),
     getUserCurrency(),
+    getPlanIdForCert(cert.id),
   ]);
   const t = dict.certification;
 
@@ -145,12 +146,22 @@ export default async function CertificationPage({
         </div>
 
         <div className="mt-7 flex flex-wrap gap-3">
-          <ButtonLink href={`/${lang}/advisor/${cert.id}`} size="lg">
-            {t.askAdvisor}
-          </ButtonLink>
-          <ButtonLink href={`/${lang}/plan/new/${cert.id}`} variant="secondary" size="lg">
-            {t.buildYourself}
-          </ButtonLink>
+          {/* One plan per cert: once it exists, the two create actions collapse to
+              a single link into that plan. Change it there via Edit or Revise. */}
+          {existingPlanId ? (
+            <ButtonLink href={`/${lang}/plan/${existingPlanId}`} size="lg">
+              {t.viewPlan}
+            </ButtonLink>
+          ) : (
+            <>
+              <ButtonLink href={`/${lang}/advisor/${cert.id}`} size="lg">
+                {t.askAdvisor}
+              </ButtonLink>
+              <ButtonLink href={`/${lang}/plan/new/${cert.id}`} variant="secondary" size="lg">
+                {t.buildYourself}
+              </ButtonLink>
+            </>
+          )}
           <ButtonLink href={cert.officialUrl} variant="link" target="_blank" rel="noopener noreferrer">
             {cert.provider} ↗
           </ButtonLink>

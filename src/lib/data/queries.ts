@@ -63,6 +63,22 @@ export async function getPlans(): Promise<PlanRow[]> {
   return data ?? [];
 }
 
+/**
+ * The caller's plan id for a certification, or null. One plan per cert is enforced
+ * by a unique(user_id, certification_id) constraint, so at most one row comes back.
+ * RLS scopes it to the caller, so this never sees anyone else's plan.
+ */
+export async function getPlanIdForCert(certId: string): Promise<string | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from('study_plans')
+    .select('id')
+    .eq('certification_id', certId)
+    .limit(1)
+    .maybeSingle();
+  return data?.id ?? null;
+}
+
 export async function getPlan(planId: string): Promise<PlanWithProgress | null> {
   const supabase = await createClient();
 
