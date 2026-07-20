@@ -39,6 +39,15 @@ export const savePlanSchema = storedPlanSchema
     certId: z.string().min(1).max(100),
     // '' from an empty <input type="date">, or a real date. Never a partial.
     targetDate: z.union([z.literal(''), z.string().regex(/^\d{4}-\d{2}-\d{2}$/)]).optional(),
+    // The plan's own study-schedule override, edited alongside the plan. Present
+    // only from the edit page; validated for real by normalizeStudySchedule in the
+    // action (an empty windows array clears the override → use the profile default).
+    studySchedule: z
+      .object({
+        windows: z.array(z.object({ day: z.number().int(), start: z.string(), end: z.string() })),
+        timezone: z.string(),
+      })
+      .optional(),
   })
   .refine(atLeastOneTopic, { message: 'A plan needs at least one topic.' })
   .refine(uniqueTopicIds, { message: 'Topic ids must be unique.' });

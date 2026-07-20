@@ -197,7 +197,6 @@ export default async function ProfilePage({ params }: { params: Promise<{ lang: 
               to: dict.studySchedule.to,
               timezoneNote: dict.studySchedule.timezoneNote,
               save: dict.common.save,
-              ask: dict.studySchedule.ask,
             }}
           />
         </Card>

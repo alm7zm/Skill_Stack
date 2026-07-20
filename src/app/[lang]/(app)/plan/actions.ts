@@ -2,7 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
-import { createClient, getUser } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 import { getResourcesForCertification } from '@/lib/data/resources';
 import { isLocale } from '@/lib/i18n';
 import { savePlanSchema, type SavePlanInput } from '@/lib/plan/schema';
@@ -27,7 +27,7 @@ export async function savePlan(input: SavePlanInput): Promise<{ error: string } 
   const parsed = savePlanSchema.safeParse(input);
   if (!parsed.success)
     return { error: 'Please give every week and topic a title, and check the hours.' };
-  const { planId, certId, summary, recommended, targetDate, weeks } = parsed.data;
+  const { planId, certId, summary, recommended, targetDate, weeks, studySchedule } = parsed.data;
 
   const supabase = await createClient();
 
@@ -75,44 +75,22 @@ export async function savePlan(input: SavePlanInput): Promise<{ error: string } 
     return { error: 'Could not save the plan. Please try again.' };
   }
 
+  // Persist the plan's schedule override alongside it. Best-effort and separate
+  // from the transactional plan write: an empty grid clears the override (null →
+  // use the profile default), and a failure here (e.g. column not migrated yet)
+  // must not undo a saved plan. Only when the edit page sent one.
+  if (studySchedule !== undefined) {
+    const sched = normalizeStudySchedule(studySchedule);
+    const { error: se } = await supabase
+      .from('study_plans')
+      .update({ study_schedule: sched })
+      .eq('id', savedId);
+    if (se) console.error('plan schedule save failed:', se.message);
+  }
+
   revalidatePath(`/[lang]/plan/${savedId}`, 'page');
   revalidatePath('/[lang]/dashboard', 'page');
   redirect(`/${input.lang}/plan/${savedId}`);
-}
-
-/**
- * Save a per-plan study-schedule override (study_plans.study_schedule). Same
- * validation as the profile's saveStudySchedule; the plan id comes from a hidden
- * field and RLS scopes the update to the owner. Posted by StudyScheduleForm on
- * the edit page.
- */
-export async function savePlanSchedule(formData: FormData): Promise<void> {
-  const user = await getUser();
-  if (!user) throw new Error('Not signed in');
-
-  const planId = String(formData.get('planId') ?? '');
-  if (!planId) throw new Error('Missing plan.');
-
-  let windows: unknown = [];
-  try {
-    windows = JSON.parse(String(formData.get('windows') ?? '[]'));
-  } catch {
-    windows = [];
-  }
-  const schedule = normalizeStudySchedule({ windows, timezone: formData.get('timezone') });
-  if (!schedule) throw new Error('Pick at least one day with a start and end time.');
-
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from('study_plans')
-    .update({ study_schedule: schedule })
-    .eq('id', planId);
-  if (error) {
-    console.error('savePlanSchedule failed:', error.message);
-    throw new Error("Could not save this plan's schedule. Please try again.");
-  }
-
-  revalidatePath(`/[lang]/plan/${planId}`, 'page');
 }
 
 /**

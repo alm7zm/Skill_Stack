@@ -7,10 +7,14 @@ import { interpolate } from '@/lib/utils';
 import { normalizeWeeks, weekHours } from '@/lib/plan/reconcile';
 import { MAX_INSTRUCTION_CHARS } from '@/lib/plan/schema';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { ScheduleGrid, type ScheduleWindows } from '@/components/app/schedule-grid';
 import { savePlan } from '@/app/[lang]/(app)/plan/actions';
 import type { Locale } from '@/lib/i18n';
 import type { LearningResource } from '@/lib/types';
+import type { StudySchedule } from '@/lib/calendar/schedule';
 import type { EditablePlan, EditableWeek, EditableTopic } from '@/lib/plan/types';
+
+type ScheduleLabels = { title: string; body: string; from: string; to: string; timezoneNote: string };
 
 type Labels = {
   newTitle: string; editTitle: string; intro: string; summary: string; summaryPlaceholder: string;
@@ -48,6 +52,8 @@ export function PlanEditor({
   planId,
   initialPlan,
   initialTargetDate,
+  initialSchedule,
+  scheduleLabels,
   catalog,
   labels,
 }: {
@@ -57,6 +63,10 @@ export function PlanEditor({
   initialPlan: EditablePlan;
   /** study_plans.target_date — a row field, not part of the plan jsonb. */
   initialTargetDate?: string;
+  /** This plan's schedule (its own override, or the profile default prefill). */
+  initialSchedule?: StudySchedule | null;
+  /** When set (edit mode), the schedule section renders and saves with the plan. */
+  scheduleLabels?: ScheduleLabels;
   catalog: LearningResource[];
   labels: Labels;
 }) {
@@ -70,12 +80,29 @@ export function PlanEditor({
   const [reviseError, setReviseError] = useState<string>();
   const [confirmDiscard, setConfirmDiscard] = useState(false);
 
-  // The snapshot at mount; the draft is "dirty" when the plan or the target date
-  // no longer matches what was loaded. Lazy state, not a ref: it is computed once
-  // and read during render, which a ref may not be.
+  // Schedule for this plan (edit mode only). weekday -> window; empty means "use
+  // the profile default". Timezone is the browser's, detected once.
+  const [scheduleWindows, setScheduleWindows] = useState<ScheduleWindows>(() =>
+    Object.fromEntries((initialSchedule?.windows ?? []).map((w) => [w.day, { start: w.start, end: w.end }]))
+  );
+  const [scheduleTimezone] = useState(
+    () => initialSchedule?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC'
+  );
+  const scheduleEntries = Object.entries(scheduleWindows)
+    .map(([d, w]) => ({ day: Number(d), ...w }))
+    .sort((a, b) => a.day - b.day);
+
+  // The snapshot at mount; the draft is "dirty" when the plan, the target date, or
+  // the schedule no longer matches what was loaded. Lazy state, not a ref: it is
+  // computed once and read during render, which a ref may not be.
   const [initialJson] = useState(() => JSON.stringify(initialPlan));
+  const [initialScheduleJson] = useState(() =>
+    JSON.stringify((initialSchedule?.windows ?? []).map((w) => ({ day: w.day, start: w.start, end: w.end })))
+  );
   const dirty =
-    JSON.stringify(plan) !== initialJson || targetDate !== (initialTargetDate ?? '');
+    JSON.stringify(plan) !== initialJson ||
+    targetDate !== (initialTargetDate ?? '') ||
+    (!!scheduleLabels && JSON.stringify(scheduleEntries) !== initialScheduleJson);
 
   // Mutating helpers keep weekNumber sequential so display and save agree.
   const setWeeks = (weeks: EditableWeek[]) => setPlan((p) => ({ ...p, weeks: normalizeWeeks(weeks) }));
@@ -105,6 +132,8 @@ export function PlanEditor({
       recommended: plan.recommended,
       targetDate, // '' clears the date; the schema accepts '' or YYYY-MM-DD
       weeks: plan.weeks,
+      // Only in edit mode: an empty grid clears the override → profile default.
+      ...(scheduleLabels ? { studySchedule: { windows: scheduleEntries, timezone: scheduleTimezone } } : {}),
     });
     if (res && 'error' in res) {
       setError(res.error);
@@ -154,8 +183,49 @@ export function PlanEditor({
       </h1>
       <p className="prose-measure mt-2 text-sm text-ink-muted">{labels.intro}</p>
 
+      {/* Save / cancel at the top — delete lives on the plan view page, next to Edit. */}
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        <Button type="button" onClick={() => void onSave()} disabled={saving}>
+          {saving ? labels.saving : labels.save}
+        </Button>
+        <Button type="button" variant="ghost" onClick={onCancel}>{labels.cancel}</Button>
+      </div>
+      {error && (
+        <p role="alert" className="mt-3 rounded-sm bg-danger-wash px-3 py-2 text-sm text-danger">
+          {error}
+        </p>
+      )}
+
+      {/* Revise with advisor — above the summary, so the fastest way to reshape a
+          plan is the first thing offered. */}
+      <section className="mt-6 rounded-lg border border-rule bg-paper-sunken p-5">
+        <h2 className="text-sm font-semibold text-ink">{labels.revise.title}</h2>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <input
+            value={instruction}
+            onChange={(e) => setInstruction(e.target.value)}
+            placeholder={labels.revise.placeholder}
+            disabled={revising}
+            maxLength={MAX_INSTRUCTION_CHARS}
+            className="h-10 min-w-64 flex-1 rounded-md border border-rule bg-paper-raised px-3 text-sm text-ink placeholder:text-ink-faint"
+          />
+          <Button type="button" variant="secondary" onClick={onRevise} disabled={revising || !instruction.trim()}>
+            {revising ? labels.revise.revising : labels.revise.button}
+          </Button>
+        </div>
+        <span
+          title={labels.revise.charCount}
+          className={`tabular mt-2 block text-end text-xs ${
+            instruction.length >= MAX_INSTRUCTION_CHARS ? 'text-danger' : 'text-ink-faint'
+          }`}
+        >
+          {instruction.length}/{MAX_INSTRUCTION_CHARS}
+        </span>
+        {reviseError && <p role="alert" className="mt-2 text-sm text-danger">{reviseError}</p>}
+      </section>
+
       {/* Summary + target date */}
-      <div className="mt-6 flex flex-col gap-4">
+      <div className="mt-8 flex flex-col gap-4">
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-medium text-ink">{labels.summary}</span>
           <textarea
@@ -176,6 +246,32 @@ export function PlanEditor({
           />
         </label>
       </div>
+
+      {/* Study schedule for this plan — directly under the target date, above the
+          weeks. Edit mode only; saved with the plan's single Save above. */}
+      {scheduleLabels && planId && (
+        <section className="mt-8" aria-labelledby="plan-schedule-heading">
+          <h2 id="plan-schedule-heading" className="text-sm font-semibold text-ink">
+            {scheduleLabels.title}
+          </h2>
+          <p className="prose-measure mt-1 text-xs leading-relaxed text-ink-faint">
+            {scheduleLabels.body}
+          </p>
+          <div className="mt-3">
+            <ScheduleGrid
+              lang={lang}
+              windows={scheduleWindows}
+              onChange={setScheduleWindows}
+              timezone={scheduleTimezone}
+              labels={{
+                from: scheduleLabels.from,
+                to: scheduleLabels.to,
+                timezoneNote: scheduleLabels.timezoneNote,
+              }}
+            />
+          </div>
+        </section>
+      )}
 
       {/* Weeks */}
       <div className="mt-8 flex flex-col gap-6">
@@ -322,42 +418,6 @@ export function PlanEditor({
       >
         + {labels.addWeek}
       </button>
-
-      {/* Revise with advisor */}
-      <section className="mt-10 rounded-lg border border-rule bg-paper-sunken p-5">
-        <h2 className="text-sm font-semibold text-ink">{labels.revise.title}</h2>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <input
-            value={instruction}
-            onChange={(e) => setInstruction(e.target.value)}
-            placeholder={labels.revise.placeholder}
-            disabled={revising}
-            maxLength={MAX_INSTRUCTION_CHARS}
-            className="h-10 min-w-64 flex-1 rounded-md border border-rule bg-paper-raised px-3 text-sm text-ink placeholder:text-ink-faint"
-          />
-          <Button type="button" variant="secondary" onClick={onRevise} disabled={revising || !instruction.trim()}>
-            {revising ? labels.revise.revising : labels.revise.button}
-          </Button>
-        </div>
-        <span
-          title={labels.revise.charCount}
-          className={`tabular mt-2 block text-end text-xs ${
-            instruction.length >= MAX_INSTRUCTION_CHARS ? 'text-danger' : 'text-ink-faint'
-          }`}
-        >
-          {instruction.length}/{MAX_INSTRUCTION_CHARS}
-        </span>
-        {reviseError && <p role="alert" className="mt-2 text-sm text-danger">{reviseError}</p>}
-      </section>
-
-      {/* Save / cancel — delete lives on the plan view page, next to Edit. */}
-      {error && <p role="alert" className="mt-6 rounded-sm bg-danger-wash px-3 py-2 text-sm text-danger">{error}</p>}
-      <div className="mt-8 flex flex-wrap items-center gap-3 border-t border-rule pt-6">
-        <Button type="button" onClick={() => void onSave()} disabled={saving}>
-          {saving ? labels.saving : labels.save}
-        </Button>
-        <Button type="button" variant="ghost" onClick={onCancel}>{labels.cancel}</Button>
-      </div>
 
       {confirmDiscard && (
         <ConfirmDialog

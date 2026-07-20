@@ -89,13 +89,7 @@
     "planBody": "When to study this plan. It starts from your preferred schedule — change it here to override it for this plan only.",
     "from": "From",
     "to": "to",
-    "timezoneNote": "Times are in {tz}. Studying somewhere else? Save again from there to update it.",
-    "ask": {
-      "placeholder": "e.g. Wed evenings and Sunday afternoons",
-      "button": "Ask the advisor",
-      "asking": "Reading",
-      "error": "Couldn't read that. Try naming the days and times."
-    }
+    "timezoneNote": "Times are in {tz}. Studying somewhere else? Save again from there to update it."
   },
   "landing": {
     "hero": {
