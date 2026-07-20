@@ -7,6 +7,7 @@ import { createClient, getUser } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { isLocale } from '@/lib/i18n';
 import { ADVISOR_KNOBS, normalizeAdvisorSettings, type AdvisorKnob } from '@/lib/advisor-settings';
+import { normalizeStudySchedule } from '@/lib/calendar/schedule';
 import { CURRENCIES } from '@/lib/currencies';
 
 /**
@@ -32,6 +33,38 @@ export async function updateAdvisorSettings(formData: FormData) {
   if (error) {
     console.error('updateAdvisorSettings failed:', error.message);
     throw new Error('Could not save your settings. Please try again.');
+  }
+
+  revalidatePath('/[lang]/settings', 'page');
+}
+
+/**
+ * The user's study schedule (time, weekdays, timezone). Validation is
+ * normalizeStudySchedule: a form that posts something incomplete or off-list is
+ * rejected rather than stored, so the jsonb can only hold a schedule the plan
+ * page and calendar sync both understand.
+ */
+export async function saveStudySchedule(formData: FormData) {
+  const user = await getUser();
+  if (!user) throw new Error('Not signed in');
+
+  let windows: unknown = [];
+  try {
+    windows = JSON.parse(String(formData.get('windows') ?? '[]'));
+  } catch {
+    windows = [];
+  }
+  const schedule = normalizeStudySchedule({ windows, timezone: formData.get('timezone') });
+  if (!schedule) throw new Error('Pick at least one day with a start and end time.');
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('profiles')
+    .update({ study_schedule: schedule })
+    .eq('id', user.id);
+  if (error) {
+    console.error('saveStudySchedule failed:', error.message);
+    throw new Error('Could not save your study schedule. Please try again.');
   }
 
   revalidatePath('/[lang]/settings', 'page');

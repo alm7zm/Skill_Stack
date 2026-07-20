@@ -19,8 +19,10 @@ export const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
 export type CalendarEventInput = {
   summary: string;
   description?: string;
-  start: Date;
-  end: Date;
+  // Wall-clock local time plus its IANA zone — Google resolves the real instant
+  // (DST included). See lib/calendar/schedule.ts eventTimes().
+  start: { dateTime: string; timeZone: string };
+  end: { dateTime: string; timeZone: string };
 };
 
 /**
@@ -57,10 +59,8 @@ function toEventBody(input: CalendarEventInput) {
   return {
     summary: input.summary,
     description: input.description,
-    // Google requires an IANA timezone alongside the timestamp. UTC keeps this
-    // unambiguous; the user's calendar renders it in their own zone.
-    start: { dateTime: input.start.toISOString(), timeZone: 'UTC' },
-    end: { dateTime: input.end.toISOString(), timeZone: 'UTC' },
+    start: input.start,
+    end: input.end,
   };
 }
 

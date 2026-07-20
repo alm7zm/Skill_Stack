@@ -4,9 +4,12 @@ import { isLocale } from '@/lib/i18n';
 import { getProfile } from '@/lib/data/queries';
 import { getUser } from '@/lib/supabase/server';
 import { DIFFICULTY_ORDER } from '@/lib/utils';
+import { normalizeStudySchedule } from '@/lib/calendar/schedule';
+import { saveStudySchedule } from '@/app/[lang]/(app)/settings/actions';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/app/avatar';
+import { StudyScheduleForm } from '@/components/app/study-schedule-form';
 import { RESOURCE_FORMATS, RESOURCE_SITES } from '@/lib/resource-prefs';
 import { EXAM_LANGUAGES } from '@/lib/languages';
 import { CURRENCIES } from '@/lib/currencies';
@@ -176,6 +179,29 @@ export default async function ProfilePage({ params }: { params: Promise<{ lang: 
           {dict.common.save}
         </Button>
       </form>
+
+      <section className="mt-10" aria-labelledby="study-schedule-heading">
+        <h2 id="study-schedule-heading" className="font-display text-lg font-semibold text-ink">
+          {dict.studySchedule.profileTitle}
+        </h2>
+        <p className="prose-measure mt-1 text-xs leading-relaxed text-ink-faint">
+          {dict.studySchedule.profileBody}
+        </p>
+        <Card className="mt-3 p-4">
+          <StudyScheduleForm
+            lang={lang}
+            initial={normalizeStudySchedule(profile?.study_schedule)}
+            action={saveStudySchedule}
+            labels={{
+              from: dict.studySchedule.from,
+              to: dict.studySchedule.to,
+              timezoneNote: dict.studySchedule.timezoneNote,
+              save: dict.common.save,
+              ask: dict.studySchedule.ask,
+            }}
+          />
+        </Card>
+      </section>
 
       <TagSection
         title={t.skills}

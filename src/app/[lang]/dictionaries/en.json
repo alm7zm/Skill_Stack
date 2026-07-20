@@ -82,6 +82,21 @@
     "error": "Couldn't send that. Please try again.",
     "cancel": "Cancel"
   },
+  "studySchedule": {
+    "profileTitle": "Preferred studying schedule",
+    "profileBody": "Your usual availability. New plans follow this; you can set a different schedule for one plan when you edit it.",
+    "planTitle": "Study schedule for this plan",
+    "planBody": "When to study this plan. It starts from your preferred schedule — change it here to override it for this plan only.",
+    "from": "From",
+    "to": "to",
+    "timezoneNote": "Times are in {tz}. Studying somewhere else? Save again from there to update it.",
+    "ask": {
+      "placeholder": "e.g. Wed evenings and Sunday afternoons",
+      "button": "Ask the advisor",
+      "asking": "Reading",
+      "error": "Couldn't read that. Try naming the days and times."
+    }
+  },
   "landing": {
     "hero": {
       "eyebrow": "Certification planning",
@@ -380,6 +395,7 @@
     "resync": "Update calendar",
     "calendarConnect": "Connect your Google Calendar in {settings} to add this plan.",
     "calendarError": "Couldn't add this plan to your calendar. Try again.",
+    "setStudyTime": "Set a study time to see when to study each topic →",
     "notFound": "That plan doesn't exist, or it isn't yours.",
     "resources": "Resources",
     "paid": "Paid",

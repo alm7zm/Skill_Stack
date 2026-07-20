@@ -210,6 +210,7 @@ export type ProfileRow = {
   preferred_resource_formats: string[];
   preferred_resource_sites: string[];
   advisor_settings: Record<string, unknown> | null;
+  study_schedule: Record<string, unknown> | null;
 };
 
 /** A skill and how well the user knows it. level is null for skills added before
@@ -227,7 +228,7 @@ export async function getProfile(): Promise<{
     supabase
       .from('profiles')
       .select(
-        'id, email, full_name, avatar_url, career_goal, job_role, experience_level, budget, budget_currency, daily_study_time, weekly_availability, preferred_resource_formats, preferred_resource_sites, advisor_settings'
+        'id, email, full_name, avatar_url, career_goal, job_role, experience_level, budget, budget_currency, daily_study_time, weekly_availability, preferred_resource_formats, preferred_resource_sites, advisor_settings, study_schedule'
       )
       .maybeSingle(),
     supabase.from('user_skills').select('skill_name, level'),
@@ -239,6 +240,22 @@ export async function getProfile(): Promise<{
     skills: (skills ?? []).map((s) => ({ name: s.skill_name, level: s.level ?? null })),
     languages: (languages ?? []).map((l) => l.language_name),
   };
+}
+
+/**
+ * A plan's own study-schedule override (study_plans.study_schedule), raw jsonb or
+ * null. Callers normalize it. Tolerant of the column not existing yet — a missing
+ * column returns an error the driver surfaces as null data, so pages never break
+ * before the 20260720000002 migration is applied. RLS scopes the read to the owner.
+ */
+export async function getPlanScheduleRaw(planId: string): Promise<unknown> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from('study_plans')
+    .select('study_schedule')
+    .eq('id', planId)
+    .maybeSingle();
+  return (data as { study_schedule?: unknown } | null)?.study_schedule ?? null;
 }
 
 /**

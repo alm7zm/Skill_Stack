@@ -2,9 +2,15 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getDictionary } from '../../../dictionaries';
 import { isLocale } from '@/lib/i18n';
-import { getUser } from '@/lib/supabase/server';
-import { getPlan } from '@/lib/data/queries';
+import { createClient, getUser } from '@/lib/supabase/server';
+import { getPlan, getPlanScheduleRaw } from '@/lib/data/queries';
 import { weekHours } from '@/lib/plan/reconcile';
+import {
+  buildSlots,
+  formatSlot,
+  normalizeStudySchedule,
+  todayIn,
+} from '@/lib/calendar/schedule';
 import { isCalendarConnected } from '@/app/[lang]/(app)/settings/calendar-status';
 import { getResourcesByIds } from '@/lib/data/resources';
 import { siteOf } from '@/lib/resource-prefs';
@@ -38,6 +44,27 @@ export default async function PlanPage({
 
   const t = dict.plan;
   const weeks = plan.row.plan?.weeks ?? [];
+
+  // Where the study times come from: this plan's own schedule if it has one, else
+  // the profile's preferred schedule — the same resolution the calendar uses, so
+  // the plan shows exactly when each topic lands. Null until either is set.
+  const supabase = await createClient();
+  const [planScheduleRaw, { data: profile }] = await Promise.all([
+    getPlanScheduleRaw(planId),
+    supabase.from('profiles').select('study_schedule').eq('id', user?.id ?? '').maybeSingle(),
+  ]);
+  const schedule =
+    normalizeStudySchedule(planScheduleRaw) ?? normalizeStudySchedule(profile?.study_schedule);
+  const flatTopics = weeks.flatMap((w) => w.topics);
+  const slotByTopic = schedule
+    ? new Map(
+        buildSlots(
+          schedule,
+          todayIn(schedule.timezone),
+          flatTopics.map((x) => x.estimatedHours)
+        ).map((slot, i) => [flatTopics[i].id, formatSlot(slot, lang)])
+      )
+    : null;
   const doneIds = new Set(plan.topics.filter((x) => x.completed).map((x) => x.topic_id));
   // "Update calendar" vs "Add" — any topic already carrying an event id means
   // this plan has been synced before.
@@ -123,6 +150,17 @@ export default async function PlanPage({
             }}
           />
         </div>
+
+        {!schedule && (
+          <p className="mt-3 text-xs text-ink-muted">
+            <Link
+              href={`/${lang}/plan/${plan.row.id}/edit`}
+              className="text-accent underline decoration-dotted underline-offset-2 hover:decoration-solid"
+            >
+              {t.setStudyTime}
+            </Link>
+          </p>
+        )}
       </header>
 
       {plan.row.plan?.summary && (
@@ -187,6 +225,11 @@ export default async function PlanPage({
                         <span className="block text-xs leading-relaxed text-ink-muted">
                           {topic.description}
                         </span>
+                        {slotByTopic?.get(topic.id) && (
+                          <span className="tabular mt-1 block text-xs font-medium text-accent">
+                            {slotByTopic.get(topic.id)}
+                          </span>
+                        )}
                       </span>
 
                       {/* Full unit word, not hours[0] — slicing the first letter

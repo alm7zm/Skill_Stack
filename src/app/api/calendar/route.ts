@@ -2,7 +2,15 @@ import { z } from 'zod';
 import { createClient, getUser } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { CalendarAuthError, getAccessToken, upsertEvent } from '@/lib/calendar/google';
+import {
+  buildSlots,
+  DEFAULT_SCHEDULE,
+  eventTimes,
+  normalizeStudySchedule,
+  todayIn,
+} from '@/lib/calendar/schedule';
 import { getCertificationById } from '@/lib/data/certifications';
+import { getPlanScheduleRaw } from '@/lib/data/queries';
 
 /**
  * Pushes a plan's topics into the user's Google Calendar.
@@ -10,14 +18,15 @@ import { getCertificationById } from '@/lib/data/certifications';
  * The landing page advertised this feature and the repo had a CalendarEvent type
  * and Google credentials in .env.local — but no calendar code at all. This is it.
  *
+ * Sessions land on the user's study schedule (Settings) — their time, on their
+ * chosen weekdays, one topic per study-day. With no schedule set, DEFAULT_SCHEDULE
+ * reproduces the old behaviour (every day, 18:00 UTC).
+ *
  * Re-syncing updates the existing events rather than duplicating them, because
  * each topic remembers its calendar_event_id.
  */
 
 const bodySchema = z.object({ planId: z.string().uuid() });
-
-/** Sessions are scheduled at 18:00 UTC, one topic per day, starting tomorrow. */
-const SESSION_HOUR_UTC = 18;
 
 export async function POST(req: Request) {
   const user = await getUser();
@@ -31,13 +40,21 @@ export async function POST(req: Request) {
   // Read the plan through the *user* client, so RLS proves they own it before
   // the admin client is touched for anything.
   const supabase = await createClient();
-  const { data: plan } = await supabase
-    .from('study_plans')
-    .select('id, certification_id, plan')
-    .eq('id', planId)
-    .maybeSingle();
+  const [{ data: plan }, { data: profile }, planScheduleRaw] = await Promise.all([
+    supabase.from('study_plans').select('id, certification_id, plan').eq('id', planId).maybeSingle(),
+    supabase.from('profiles').select('study_schedule').eq('id', user.id).maybeSingle(),
+    // Separate + tolerant: the study_plans.study_schedule column may not exist yet
+    // (pre-migration). Folding it into the select above would fail the whole row.
+    getPlanScheduleRaw(planId),
+  ]);
 
   if (!plan) return Response.json({ error: 'not found' }, { status: 404 });
+
+  // This plan's own schedule wins; else the profile's preferred; else the default.
+  const schedule =
+    normalizeStudySchedule(planScheduleRaw) ??
+    normalizeStudySchedule(profile?.study_schedule) ??
+    DEFAULT_SCHEDULE;
 
   let admin;
   try {
@@ -83,15 +100,17 @@ export async function POST(req: Request) {
   const weeks = (plan.plan as { weeks?: { topics: { id: string; title: string; description: string; estimatedHours: number }[] }[] } | null)?.weeks ?? [];
   const topics = weeks.flatMap((w) => w.topics);
 
+  // One slot per topic, on the user's schedule, starting after today in their zone.
+  const slots = buildSlots(
+    schedule,
+    todayIn(schedule.timezone),
+    topics.map((t) => t.estimatedHours)
+  );
+
   let created = 0;
   let updated = 0;
 
   for (const [index, topic] of topics.entries()) {
-    const start = new Date();
-    start.setUTCDate(start.getUTCDate() + index + 1);
-    start.setUTCHours(SESSION_HOUR_UTC, 0, 0, 0);
-
-    const end = new Date(start.getTime() + Math.max(0.5, topic.estimatedHours) * 3_600_000);
     const existing = eventIdByTopic.get(topic.id) ?? null;
 
     const eventId = await upsertEvent(
@@ -99,8 +118,7 @@ export async function POST(req: Request) {
       {
         summary: `${cert?.shortName ?? 'Study'}: ${topic.title}`,
         description: topic.description,
-        start,
-        end,
+        ...eventTimes(slots[index]),
       },
       existing
     );
